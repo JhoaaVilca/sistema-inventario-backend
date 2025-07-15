@@ -16,7 +16,7 @@ import java.util.Optional;
 //http://localhost:8080/api/productos
 
 @RequestMapping("/api/productos") // Ruta clara y RESTful
-@CrossOrigin(origins = "http://localhost:3000") // Solo mientras desarrollas el frontend local
+@CrossOrigin(origins = "http://localhost:3001") // Solo mientras desarrollas el frontend local
 public class ProductoControlador {
 
     @Autowired
