@@ -45,6 +45,15 @@
 			<version>12.4.2.jre11</version>
 		</dependency>
 
+		<!--dependencia paara la apiperu >-->
+
+		<dependency>
+			<groupId>org.json</groupId>
+			<artifactId>json</artifactId>
+			<version>20240303</version> <!-- o la versión más reciente -->
+		</dependency>
+
+
 		<!--<dependency>
 			<groupId>com.mysql</groupId>
 			<artifactId>mysql-connector-j</artifactId>
