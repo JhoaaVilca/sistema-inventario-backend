@@ -2,6 +2,8 @@ package tienda.inventario.modelo;
 
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.time.LocalDate;
 import java.util.Date;
 
 @Entity
@@ -24,6 +26,5 @@ public class Producto {
 
     private String categoria;
 
-    @Temporal(TemporalType.DATE)
-    private Date fechaIngreso;
+    private LocalDate fechaIngreso;
 }
