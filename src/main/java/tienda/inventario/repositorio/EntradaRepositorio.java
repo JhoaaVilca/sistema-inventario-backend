@@ -17,5 +17,8 @@ public interface EntradaRepositorio extends JpaRepository<Entrada, Long> {
 
     // Buscar por rango de fechas
     List<Entrada> findByFechaEntradaBetween(LocalDate fechaInicio, LocalDate fechaFin);
+
+    @Query("SELECT e FROM Entrada e WHERE e.proveedor.idProveedor = :idProveedor AND e.fechaEntrada BETWEEN :fechaInicio AND :fechaFin")
+    List<Entrada> findByProveedorIdAndFechaEntradaBetween(Long idProveedor, LocalDate fechaInicio, LocalDate fechaFin);
 }
 

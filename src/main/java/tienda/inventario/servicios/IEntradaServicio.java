@@ -14,4 +14,5 @@ public interface IEntradaServicio {
     List<Entrada> filtrarPorProveedor(Long idProveedor);
     List<Entrada> filtrarPorFecha(LocalDate fecha);
     List<Entrada> filtrarPorRangoFechas(LocalDate fechaInicio, LocalDate fechaFin);
+    List<Entrada> filtrarPorProveedorYRangoFechas(Long idProveedor, LocalDate fechaInicio, LocalDate fechaFin);
 }

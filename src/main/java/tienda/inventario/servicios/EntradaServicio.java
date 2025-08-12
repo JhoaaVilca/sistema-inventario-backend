@@ -102,4 +102,9 @@ public class EntradaServicio implements IEntradaServicio {
     public List<Entrada> filtrarPorRangoFechas(LocalDate fechaInicio, LocalDate fechaFin) {
         return entradaRepositorio.findByFechaEntradaBetween(fechaInicio, fechaFin);
     }
+
+    @Override
+    public List<Entrada> filtrarPorProveedorYRangoFechas(Long idProveedor, LocalDate fechaInicio, LocalDate fechaFin) {
+        return entradaRepositorio.findByProveedorIdAndFechaEntradaBetween(idProveedor, fechaInicio, fechaFin);
+    }
 }

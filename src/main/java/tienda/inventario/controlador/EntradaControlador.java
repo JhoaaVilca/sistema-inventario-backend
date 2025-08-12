@@ -15,7 +15,6 @@ import org.springframework.http.HttpStatus;
 
 @RestController
 @RequestMapping("/api/entradas")
-@CrossOrigin(origins = "*")
 public class EntradaControlador {
 
     @Autowired
@@ -78,6 +77,27 @@ public class EntradaControlador {
     public List<Entrada> filtrarPorRango(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
                                          @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin) {
         return entradaServicio.filtrarPorRangoFechas(inicio, fin);
+    }
+
+    @GetMapping("/filtrar")
+    public List<Entrada> filtrarEntradas(
+            @RequestParam(required = false) Long idProveedor,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin) {
+        
+        if (idProveedor != null && fechaInicio != null && fechaFin != null) {
+            // Filtrar por proveedor y rango de fechas
+            return entradaServicio.filtrarPorProveedorYRangoFechas(idProveedor, fechaInicio, fechaFin);
+        } else if (idProveedor != null) {
+            // Solo filtrar por proveedor
+            return entradaServicio.filtrarPorProveedor(idProveedor);
+        } else if (fechaInicio != null && fechaFin != null) {
+            // Solo filtrar por rango de fechas
+            return entradaServicio.filtrarPorRangoFechas(fechaInicio, fechaFin);
+        } else {
+            // Sin filtros, retornar todas
+            return entradaServicio.listarEntradas();
+        }
     }
 
 }
