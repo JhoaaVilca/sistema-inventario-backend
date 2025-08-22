@@ -1,0 +1,31 @@
+package tienda.inventario.modelo;
+
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.time.LocalDate;
+import java.util.List;
+
+@Entity
+@Table(name = "salidas")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@ToString(exclude = "detalles")
+public class Salida {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long idSalida;
+
+    private LocalDate fechaSalida;
+
+    private Double totalSalida;
+
+    @OneToMany(mappedBy = "salida", cascade = CascadeType.ALL)
+    @JsonManagedReference
+    private List<DetalleSalida> detalles;
+}
+
+
