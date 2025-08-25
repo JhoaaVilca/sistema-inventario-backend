@@ -16,17 +16,36 @@ public class ProveedorServicio implements IProveedorServicio {
 
     @Override
     public List<Proveedor> listarProveedores() {
+        // 🔄 todos (activos e inactivos)
         return proveedorRepositorio.findAll();
     }
 
     @Override
+    public List<Proveedor> listarProveedoresActivos() {
+        // ✅ solo activos
+        return proveedorRepositorio.findByActivoTrue();
+    }
+
+    @Override
     public Proveedor guardarProveedor(Proveedor proveedor) {
+        proveedor.setActivo(true);
         return proveedorRepositorio.save(proveedor);
     }
 
     @Override
-    public void eliminarProveedor(Long id) {
-        proveedorRepositorio.deleteById(id);
+    public void desactivarProveedor(Long id) {
+        Proveedor proveedor = proveedorRepositorio.findById(id)
+                .orElseThrow(() -> new RuntimeException("Proveedor no encontrado"));
+        proveedor.setActivo(false);
+        proveedorRepositorio.save(proveedor);
+    }
+
+    @Override
+    public void activarProveedor(Long id) {
+        Proveedor proveedor = proveedorRepositorio.findById(id)
+                .orElseThrow(() -> new RuntimeException("Proveedor no encontrado"));
+        proveedor.setActivo(true);
+        proveedorRepositorio.save(proveedor);
     }
 
     @Override

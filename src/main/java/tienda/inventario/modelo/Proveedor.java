@@ -26,4 +26,7 @@ public class Proveedor {
     private String telefono;
 
     private String email;
+
+    @Column(nullable = false)  // <- obliga que no sea nulo
+    private boolean activo = true; // <- valor por defecto true
 }
