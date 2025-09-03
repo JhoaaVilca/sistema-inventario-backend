@@ -41,18 +41,18 @@ public class SalidaControlador {
 		try {
 			logger.info("Recibiendo solicitud de salida: {}", request);
 			
-			var ids = request.getDetalles().stream().map(d -> d.getIdProducto()).distinct().toList();
+			var ids = request.getDetalles().stream().map(d -> d.getProducto().getIdProducto()).distinct().toList();
 			var productos = productoRepositorio.findAllById(ids);
 			
 			// Buscar el cliente
 			Cliente cliente = null;
-			if (request.getIdCliente() != null) {
-				logger.info("Buscando cliente con ID: {}", request.getIdCliente());
-				cliente = clienteRepositorio.findById(request.getIdCliente())
+			if (request.getCliente() != null && request.getCliente().getIdCliente() != null) {
+				logger.info("Buscando cliente con ID: {}", request.getCliente().getIdCliente());
+				cliente = clienteRepositorio.findById(request.getCliente().getIdCliente())
 					.orElseThrow(() -> new IllegalArgumentException("Cliente no encontrado"));
 				logger.info("Cliente encontrado: {} - {}", cliente.getDni(), cliente.getNombres());
 			} else {
-				logger.warn("No se proporcionó ID de cliente");
+				logger.warn("No se proporcionó ID de cliente. Request cliente: {}", request.getCliente());
 			}
 			
 			logger.info("Productos encontrados: {}", productos.size());
@@ -83,13 +83,13 @@ public class SalidaControlador {
 	@PutMapping("/{id}")
 	public ResponseEntity<?> actualizarSalida(@PathVariable Long id, @Valid @RequestBody SalidaRequestDTO request){
 		try {
-			var ids = request.getDetalles().stream().map(d -> d.getIdProducto()).distinct().toList();
+			var ids = request.getDetalles().stream().map(d -> d.getProducto().getIdProducto()).distinct().toList();
 			var productos = productoRepositorio.findAllById(ids);
 			
 			// Buscar el cliente
 			Cliente cliente = null;
-			if (request.getIdCliente() != null) {
-				cliente = clienteRepositorio.findById(request.getIdCliente())
+			if (request.getCliente() != null && request.getCliente().getIdCliente() != null) {
+				cliente = clienteRepositorio.findById(request.getCliente().getIdCliente())
 					.orElseThrow(() -> new IllegalArgumentException("Cliente no encontrado"));
 			}
 			

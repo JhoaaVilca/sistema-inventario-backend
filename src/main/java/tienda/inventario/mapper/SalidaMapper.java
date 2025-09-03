@@ -16,7 +16,7 @@ public class SalidaMapper {
 		List<DetalleSalida> detalles = dto.getDetalles().stream().map(detDto -> {
 			DetalleSalida det = new DetalleSalida();
 			Producto producto = productos.stream()
-					.filter(p -> p.getIdProducto().equals(detDto.getIdProducto()))
+					.filter(p -> p.getIdProducto().equals(detDto.getProducto().getIdProducto()))
 					.findFirst()
 					.orElse(null);
 			det.setProducto(producto);

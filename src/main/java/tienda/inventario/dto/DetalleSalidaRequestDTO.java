@@ -6,7 +6,7 @@ import lombok.Data;
 @Data
 public class DetalleSalidaRequestDTO {
     @NotNull
-    private Long idProducto;
+    private ProductoReferenciaDTO producto;
 
     @NotNull
     @Positive
