@@ -10,7 +10,6 @@ import tienda.inventario.mapper.SalidaMapper;
 import tienda.inventario.modelo.Salida;
 import tienda.inventario.repositorio.ProductoRepositorio;
 import tienda.inventario.repositorio.ClienteRepositorio;
-import tienda.inventario.repositorio.SalidaRepositorio;
 import tienda.inventario.servicios.ISalidaServicio;
 import tienda.inventario.modelo.Cliente;
 
@@ -34,9 +33,6 @@ public class SalidaControlador {
 
 	@Autowired
 	private ClienteRepositorio clienteRepositorio;
-	
-	@Autowired
-	private SalidaRepositorio salidaRepositorio;
 
 	private static final Logger logger = LoggerFactory.getLogger(SalidaControlador.class);
 
@@ -45,18 +41,18 @@ public class SalidaControlador {
 		try {
 			logger.info("Recibiendo solicitud de salida: {}", request);
 			
-			var ids = request.getDetalles().stream().map(d -> d.getProducto().getIdProducto()).distinct().toList();
+			var ids = request.getDetalles().stream().map(d -> d.getIdProducto()).distinct().toList();
 			var productos = productoRepositorio.findAllById(ids);
 			
 			// Buscar el cliente
 			Cliente cliente = null;
-			if (request.getCliente() != null && request.getCliente().getIdCliente() != null) {
-				logger.info("Buscando cliente con ID: {}", request.getCliente().getIdCliente());
-				cliente = clienteRepositorio.findById(request.getCliente().getIdCliente())
+			if (request.getIdCliente() != null) {
+				logger.info("Buscando cliente con ID: {}", request.getIdCliente());
+				cliente = clienteRepositorio.findById(request.getIdCliente())
 					.orElseThrow(() -> new IllegalArgumentException("Cliente no encontrado"));
 				logger.info("Cliente encontrado: {} - {}", cliente.getDni(), cliente.getNombres());
 			} else {
-				logger.warn("No se proporcionó ID de cliente. Request cliente: {}", request.getCliente());
+				logger.warn("No se proporcionó ID de cliente");
 			}
 			
 			logger.info("Productos encontrados: {}", productos.size());
@@ -80,29 +76,20 @@ public class SalidaControlador {
 
 	@GetMapping
 	public List<SalidaResponseDTO> listar() {
-		logger.info("Listando todas las salidas");
 		var salidas = salidaServicio.listarSalidas();
-		logger.info("Salidas encontradas: {}", salidas.size());
-		
-		var response = salidas.stream().map(salida -> {
-			logger.info("Salida ID: {} - Cliente: {}", salida.getIdSalida(), 
-				salida.getCliente() != null ? salida.getCliente().getDni() : "null");
-			return SalidaMapper.toResponse(salida);
-		}).collect(Collectors.toList());
-		
-		return response;
+		return salidas.stream().map(SalidaMapper::toResponse).collect(Collectors.toList());
 	}
 
 	@PutMapping("/{id}")
 	public ResponseEntity<?> actualizarSalida(@PathVariable Long id, @Valid @RequestBody SalidaRequestDTO request){
 		try {
-			var ids = request.getDetalles().stream().map(d -> d.getProducto().getIdProducto()).distinct().toList();
+			var ids = request.getDetalles().stream().map(d -> d.getIdProducto()).distinct().toList();
 			var productos = productoRepositorio.findAllById(ids);
 			
 			// Buscar el cliente
 			Cliente cliente = null;
-			if (request.getCliente() != null && request.getCliente().getIdCliente() != null) {
-				cliente = clienteRepositorio.findById(request.getCliente().getIdCliente())
+			if (request.getIdCliente() != null) {
+				cliente = clienteRepositorio.findById(request.getIdCliente())
 					.orElseThrow(() -> new IllegalArgumentException("Cliente no encontrado"));
 			}
 			
@@ -139,30 +126,7 @@ public class SalidaControlador {
 		return salidaServicio.filtrarPorRangoFechas(inicio, fin).stream().map(SalidaMapper::toResponse).toList();
 	}
 	
-	@PostMapping("/asignar-cliente-default")
-	public ResponseEntity<?> asignarClienteDefault(@RequestParam Long idSalida, @RequestParam Long idCliente) {
-		try {
-			logger.info("Asignando cliente {} a salida {}", idCliente, idSalida);
-			
-			Cliente cliente = clienteRepositorio.findById(idCliente)
-				.orElseThrow(() -> new IllegalArgumentException("Cliente no encontrado"));
-			
-			Salida salida = salidaRepositorio.findById(idSalida)
-				.orElseThrow(() -> new IllegalArgumentException("Salida no encontrada"));
-			
-			salida.setCliente(cliente);
-			salida.setTipoVenta("CONTADO");
-			
-			Salida actualizada = salidaRepositorio.save(salida);
-			logger.info("Cliente asignado exitosamente a salida {}", idSalida);
-			
-			return ResponseEntity.ok(SalidaMapper.toResponse(actualizada));
-		} catch (Exception e) {
-			logger.error("Error al asignar cliente a salida: ", e);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-				.body("Error al asignar cliente: " + e.getMessage());
-		}
-	}
+
 }
 
 

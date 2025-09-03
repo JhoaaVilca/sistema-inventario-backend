@@ -15,7 +15,7 @@ public class SalidaRequestDTO {
     @NotEmpty
     private List<DetalleSalidaRequestDTO> detalles;
     
-    private ClienteReferenciaDTO cliente; // Cliente asociado
+    private Long idCliente; // ID del cliente asociado
     private String tipoVenta; // "CONTADO" o "CREDITO"
 }
 
