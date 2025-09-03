@@ -10,6 +10,12 @@ public class SalidaResponseDTO {
     private LocalDate fechaSalida;
     private Double totalSalida;
     private List<DetalleSalidaResponseDTO> detalles;
+    
+    // Información del cliente
+    private Long idCliente;
+    private String dniCliente;
+    private String nombreCliente;
+    private String tipoVenta;
 }
 
 

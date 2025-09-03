@@ -6,6 +6,7 @@ import lombok.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import tienda.inventario.modelo.Cliente;
 
 @Entity
 @Table(name = "salidas")
@@ -26,6 +27,12 @@ public class Salida {
     @OneToMany(mappedBy = "salida", cascade = CascadeType.ALL)
     @JsonManagedReference
     private List<DetalleSalida> detalles;
+
+    @ManyToOne
+    @JoinColumn(name = "id_cliente")
+    private Cliente cliente;
+
+    private String tipoVenta; // "CONTADO" o "CREDITO"
 }
 
 

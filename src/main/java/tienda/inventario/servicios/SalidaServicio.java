@@ -76,7 +76,7 @@ public class SalidaServicio implements ISalidaServicio {
 
     @Override
     public List<Salida> listarSalidas() {
-        return salidaRepositorio.findAll();
+        return salidaRepositorio.findAllByOrderByIdSalidaDesc();
     }
 
     @Override
@@ -84,6 +84,9 @@ public class SalidaServicio implements ISalidaServicio {
     public Salida actualizarSalida(Long id, Salida salida) {
         return salidaRepositorio.findById(id).map(salidaExistente -> {
             salidaExistente.setFechaSalida(salida.getFechaSalida());
+            salidaExistente.setCliente(salida.getCliente());
+            salidaExistente.setTipoVenta(salida.getTipoVenta());
+            
             // Recalcular total a partir de los detalles entrantes
             double totalCalculado = 0.0;
             if (salida.getDetalles() != null) {
@@ -130,12 +133,12 @@ public class SalidaServicio implements ISalidaServicio {
 
     @Override
     public List<Salida> filtrarPorFecha(LocalDate fecha) {
-        return salidaRepositorio.findByFechaSalida(fecha);
+        return salidaRepositorio.findByFechaSalidaOrderByIdSalidaDesc(fecha);
     }
 
     @Override
     public List<Salida> filtrarPorRangoFechas(LocalDate fechaInicio, LocalDate fechaFin) {
-        return salidaRepositorio.findByFechaSalidaBetween(fechaInicio, fechaFin);
+        return salidaRepositorio.findByFechaSalidaBetweenOrderByIdSalidaDesc(fechaInicio, fechaFin);
     }
 }
 
