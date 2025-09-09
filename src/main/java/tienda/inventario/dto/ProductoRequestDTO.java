@@ -8,8 +8,15 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class ProductoRequestDTO {
     private String nombreProducto;
-    private Double precio;
+    private Double precio; // Precio de venta
+    private Double precioCompra; // Precio de compra
     private Integer stock;
+    private Integer stockMinimo; // Stock mínimo para alertas
+    private String unidadMedida; // unidad, kg, litro, etc.
     private LocalDate fechaIngreso;
+    private LocalDate fechaVencimiento; // Para productos perecibles
+    private Boolean esPerecible = false; // Indica si el producto vence
+    private String descripcionCorta; // Descripción opcional
     private Long idCategoria; // 👈 pasamos solo el id de la categoría
+    private Long idProveedorPrincipal; // ID del proveedor principal
 }
