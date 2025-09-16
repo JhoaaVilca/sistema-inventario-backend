@@ -5,8 +5,7 @@ import lombok.*;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class CategoriaResponseDTO {
-    private Long idCategoria;
+public class CategoriaRequestDTO {
     private String nombre;
     private String descripcion;
     private Boolean activo;
