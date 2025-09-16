@@ -20,5 +20,22 @@ public interface EntradaRepositorio extends JpaRepository<Entrada, Long> {
 
     @Query("SELECT e FROM Entrada e WHERE e.proveedor.idProveedor = :idProveedor AND e.fechaEntrada BETWEEN :fechaInicio AND :fechaFin")
     List<Entrada> findByProveedorIdAndFechaEntradaBetween(Long idProveedor, LocalDate fechaInicio, LocalDate fechaFin);
+
+    // Buscar por número de factura (búsqueda parcial)
+    @Query("SELECT e FROM Entrada e WHERE e.numeroFactura LIKE %:numeroFactura%")
+    List<Entrada> findByNumeroFacturaContaining(String numeroFactura);
+
+    // Buscar por número de factura exacto
+    List<Entrada> findByNumeroFactura(String numeroFactura);
+
+    // Búsquedas combinadas
+    @Query("SELECT e FROM Entrada e WHERE e.proveedor.idProveedor = :idProveedor AND e.numeroFactura LIKE %:numeroFactura%")
+    List<Entrada> findByProveedorIdAndNumeroFacturaContaining(Long idProveedor, String numeroFactura);
+
+    @Query("SELECT e FROM Entrada e WHERE e.proveedor.idProveedor = :idProveedor AND e.numeroFactura LIKE %:numeroFactura% AND e.fechaEntrada BETWEEN :fechaInicio AND :fechaFin")
+    List<Entrada> findByProveedorIdAndNumeroFacturaContainingAndFechaEntradaBetween(Long idProveedor, String numeroFactura, LocalDate fechaInicio, LocalDate fechaFin);
+
+    @Query("SELECT e FROM Entrada e WHERE e.numeroFactura LIKE %:numeroFactura% AND e.fechaEntrada BETWEEN :fechaInicio AND :fechaFin")
+    List<Entrada> findByNumeroFacturaContainingAndFechaEntradaBetween(String numeroFactura, LocalDate fechaInicio, LocalDate fechaFin);
 }
 

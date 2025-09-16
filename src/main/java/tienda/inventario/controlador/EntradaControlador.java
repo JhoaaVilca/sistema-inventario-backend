@@ -3,6 +3,7 @@ package tienda.inventario.controlador;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import tienda.inventario.modelo.Entrada;
 import tienda.inventario.servicios.IEntradaServicio;
 
@@ -12,6 +13,9 @@ import org.springframework.http.ResponseEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 
 @RestController
 @RequestMapping("/api/entradas")
@@ -25,8 +29,8 @@ public class EntradaControlador {
     @PostMapping
     public ResponseEntity<?> guardar(@RequestBody Entrada entrada) {
         try {
-            entradaServicio.guardarEntrada(entrada);
-            return ResponseEntity.ok("Entrada registrada correctamente");
+            Entrada entradaGuardada = entradaServicio.guardarEntrada(entrada);
+            return ResponseEntity.ok(entradaGuardada);
         } catch (Exception e) {
             logger.error("Error al registrar entrada: ", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -82,21 +86,112 @@ public class EntradaControlador {
     @GetMapping("/filtrar")
     public List<Entrada> filtrarEntradas(
             @RequestParam(required = false) Long idProveedor,
+            @RequestParam(required = false) String numeroFactura,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin) {
         
-        if (idProveedor != null && fechaInicio != null && fechaFin != null) {
-            // Filtrar por proveedor y rango de fechas
+        // Limpiar número de factura si viene vacío
+        if (numeroFactura != null && numeroFactura.trim().isEmpty()) {
+            numeroFactura = null;
+        } else if (numeroFactura != null) {
+            numeroFactura = numeroFactura.trim();
+        }
+        
+        // Lógica de filtros combinados
+        boolean tieneProveedor = idProveedor != null;
+        boolean tieneFactura = numeroFactura != null && !numeroFactura.isEmpty();
+        boolean tieneFechas = fechaInicio != null && fechaFin != null;
+        
+        // Caso 1: Proveedor + Factura + Fechas
+        if (tieneProveedor && tieneFactura && tieneFechas) {
+            return entradaServicio.filtrarPorProveedorYNumeroFacturaYRangoFechas(idProveedor, numeroFactura, fechaInicio, fechaFin);
+        }
+        // Caso 2: Proveedor + Factura
+        else if (tieneProveedor && tieneFactura) {
+            return entradaServicio.filtrarPorProveedorYNumeroFactura(idProveedor, numeroFactura);
+        }
+        // Caso 3: Proveedor + Fechas
+        else if (tieneProveedor && tieneFechas) {
             return entradaServicio.filtrarPorProveedorYRangoFechas(idProveedor, fechaInicio, fechaFin);
-        } else if (idProveedor != null) {
-            // Solo filtrar por proveedor
+        }
+        // Caso 4: Factura + Fechas
+        else if (tieneFactura && tieneFechas) {
+            return entradaServicio.filtrarPorNumeroFacturaYRangoFechas(numeroFactura, fechaInicio, fechaFin);
+        }
+        // Caso 5: Solo Proveedor
+        else if (tieneProveedor) {
             return entradaServicio.filtrarPorProveedor(idProveedor);
-        } else if (fechaInicio != null && fechaFin != null) {
-            // Solo filtrar por rango de fechas
+        }
+        // Caso 6: Solo Factura
+        else if (tieneFactura) {
+            return entradaServicio.filtrarPorNumeroFactura(numeroFactura);
+        }
+        // Caso 7: Solo Fechas
+        else if (tieneFechas) {
             return entradaServicio.filtrarPorRangoFechas(fechaInicio, fechaFin);
-        } else {
-            // Sin filtros, retornar todas
+        }
+        // Caso 8: Sin filtros
+        else {
             return entradaServicio.listarEntradas();
+        }
+    }
+
+    // ✅ POST: Subir factura de entrada
+    @PostMapping("/{id}/factura")
+    public ResponseEntity<?> subirFactura(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
+        try {
+            if (file.isEmpty()) {
+                return ResponseEntity.badRequest().body("No se ha seleccionado ningún archivo");
+            }
+
+            // Validar tipo de archivo
+            String contentType = file.getContentType();
+            if (contentType == null || (!contentType.equals("application/pdf") && 
+                !contentType.startsWith("image/"))) {
+                return ResponseEntity.badRequest().body("Solo se permiten archivos PDF o imágenes");
+            }
+
+            String facturaUrl = entradaServicio.subirFactura(id, file);
+            return ResponseEntity.ok().body("{\"facturaUrl\": \"" + facturaUrl + "\"}");
+
+        } catch (Exception e) {
+            logger.error("Error al subir factura: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error al subir la factura: " + e.getMessage());
+        }
+    }
+
+    // ✅ GET: Descargar factura de entrada
+    @GetMapping("/{id}/factura")
+    public ResponseEntity<Resource> descargarFactura(@PathVariable Long id) {
+        try {
+            Resource resource = entradaServicio.descargarFactura(id);
+            
+            if (resource == null || !resource.exists()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            String contentType = "application/octet-stream";
+            String filename = resource.getFilename();
+            if (filename != null) {
+                String lowerFilename = filename.toLowerCase();
+                if (lowerFilename.endsWith(".pdf")) {
+                    contentType = "application/pdf";
+                } else if (lowerFilename.endsWith(".jpg") || lowerFilename.endsWith(".jpeg")) {
+                    contentType = "image/jpeg";
+                } else if (lowerFilename.endsWith(".png")) {
+                    contentType = "image/png";
+                }
+            }
+
+            return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
+                .body(resource);
+
+        } catch (Exception e) {
+            logger.error("Error al descargar factura: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 

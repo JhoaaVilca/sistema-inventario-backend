@@ -58,4 +58,9 @@ public class ProductoServicio implements IProductoServicio {
             throw new RuntimeException("No se puede eliminar el producto. Puede estar relacionado con otras entidades o tener restricciones de base de datos.", e);
         }
     }
+
+    @Override
+    public List<Producto> buscarProductosPorNombre(String nombre) {
+        return repositorio.findByNombreProductoContainingIgnoreCase(nombre);
+    }
 }

@@ -10,4 +10,5 @@ public interface IProductoServicio {
     public Optional<Producto> obtenerProductoPorId(Long id);
     public Producto guardarProducto(Producto producto);
     public void eliminarProducto(Long id);
+    public List<Producto> buscarProductosPorNombre(String nombre);
 }

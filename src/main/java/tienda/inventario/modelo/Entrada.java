@@ -27,6 +27,18 @@ public class Entrada {
 
     private Double totalEntrada;
 
+    @Column(name = "factura_url")
+    private String facturaUrl; // URL de la factura subida
+
+    @Column(name = "observaciones", columnDefinition = "TEXT")
+    private String observaciones; // Notas adicionales
+
+    @Column(name = "estado", length = 20)
+    private String estado = "Registrada"; // Estado de la entrada
+
+    @Column(name = "numero_factura", length = 50)
+    private String numeroFactura; // Número de la factura/boleta
+
     @OneToMany(mappedBy = "entrada", cascade = CascadeType.ALL)
     @JsonManagedReference
     private List<DetalleEntrada> detalles;

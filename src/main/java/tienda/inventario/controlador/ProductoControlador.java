@@ -272,4 +272,13 @@ public class ProductoControlador {
 
         return ResponseEntity.ok(resumen);
     }
+
+    // ✅ GET: Buscar productos por nombre (para autocompletado)
+    @GetMapping("/buscar")
+    public List<ProductoResponseDTO> buscarProductos(@RequestParam String q) {
+        return servicio.buscarProductosPorNombre(q)
+                .stream()
+                .map(ProductoMapper::toResponse)
+                .toList();
+    }
 }
