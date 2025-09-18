@@ -4,12 +4,11 @@ import tienda.inventario.dto.ProductoRequestDTO;
 import tienda.inventario.dto.ProductoResponseDTO;
 import tienda.inventario.modelo.Categoria;
 import tienda.inventario.modelo.Producto;
-import tienda.inventario.modelo.Proveedor;
 import java.time.LocalDate;
 
 public class ProductoMapper {
 
-    public static Producto toEntity(ProductoRequestDTO dto, Categoria categoria, Proveedor proveedorPrincipal) {
+    public static Producto toEntity(ProductoRequestDTO dto, Categoria categoria) {
         Producto p = new Producto();
         p.setNombreProducto(dto.getNombreProducto());
         p.setPrecio(dto.getPrecio()); // Precio de venta
@@ -22,7 +21,7 @@ public class ProductoMapper {
         p.setEsPerecible(dto.getEsPerecible());
         p.setDescripcionCorta(dto.getDescripcionCorta());
         p.setCategoria(categoria);
-        p.setProveedorPrincipal(proveedorPrincipal);
+
         return p;
     }
 
@@ -45,8 +44,6 @@ public class ProductoMapper {
         // Relaciones
         dto.setIdCategoria(p.getCategoria() != null ? p.getCategoria().getIdCategoria() : null);
         dto.setNombreCategoria(p.getCategoria() != null ? p.getCategoria().getNombre() : null);
-        dto.setIdProveedorPrincipal(p.getProveedorPrincipal() != null ? p.getProveedorPrincipal().getIdProveedor() : null);
-        dto.setNombreProveedorPrincipal(p.getProveedorPrincipal() != null ? p.getProveedorPrincipal().getNombre() : null);
         
         // Campos calculados para alertas
         dto.setStockBajo(calcularStockBajo(p));

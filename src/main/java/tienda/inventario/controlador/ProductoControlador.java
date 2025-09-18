@@ -8,8 +8,6 @@ import tienda.inventario.mapper.ProductoMapper;
 import tienda.inventario.modelo.Categoria;
 import tienda.inventario.modelo.Producto;
 import tienda.inventario.repositorio.CategoriaRepositorio;
-import tienda.inventario.repositorio.ProveedorRepositorio;
-import tienda.inventario.modelo.Proveedor;
 import tienda.inventario.servicios.IProductoServicio;
 
 import java.net.URI;
@@ -24,12 +22,10 @@ public class ProductoControlador {
 
     private final IProductoServicio servicio;
     private final CategoriaRepositorio categoriaRepositorio;
-    private final ProveedorRepositorio proveedorRepositorio;
 
-    public ProductoControlador(IProductoServicio servicio, CategoriaRepositorio categoriaRepositorio, ProveedorRepositorio proveedorRepositorio) {
+    public ProductoControlador(IProductoServicio servicio, CategoriaRepositorio categoriaRepositorio) {
         this.servicio = servicio;
         this.categoriaRepositorio = categoriaRepositorio;
-        this.proveedorRepositorio = proveedorRepositorio;
     }
 
     // ✅ GET: Listar todos los productos
@@ -110,14 +106,7 @@ public class ProductoControlador {
             Categoria categoria = categoriaRepositorio.findById(dto.getIdCategoria())
                     .orElseThrow(() -> new IllegalArgumentException("Categoría no encontrada con ID: " + dto.getIdCategoria()));
 
-            // Buscar proveedor principal si se proporciona
-            Proveedor proveedorPrincipal = null;
-            if (dto.getIdProveedorPrincipal() != null) {
-                proveedorPrincipal = proveedorRepositorio.findById(dto.getIdProveedorPrincipal())
-                        .orElseThrow(() -> new IllegalArgumentException("Proveedor no encontrado con ID: " + dto.getIdProveedorPrincipal()));
-            }
-
-            Producto producto = ProductoMapper.toEntity(dto, categoria, proveedorPrincipal);
+            Producto producto = ProductoMapper.toEntity(dto, categoria);
 
             Producto guardado = servicio.guardarProducto(producto);
 
@@ -145,13 +134,6 @@ public class ProductoControlador {
                 Categoria categoria = categoriaRepositorio.findById(dto.getIdCategoria())
                         .orElseThrow(() -> new IllegalArgumentException("Categoría no encontrada: " + dto.getIdCategoria()));
 
-                // Buscar proveedor principal si se proporciona
-                Proveedor proveedorPrincipal = null;
-                if (dto.getIdProveedorPrincipal() != null) {
-                    proveedorPrincipal = proveedorRepositorio.findById(dto.getIdProveedorPrincipal())
-                            .orElseThrow(() -> new IllegalArgumentException("Proveedor no encontrado: " + dto.getIdProveedorPrincipal()));
-                }
-
                 // Actualizar todos los campos
                 existente.setNombreProducto(dto.getNombreProducto());
                 existente.setPrecio(dto.getPrecio()); // Precio de venta
@@ -164,7 +146,6 @@ public class ProductoControlador {
                 existente.setEsPerecible(dto.getEsPerecible());
                 existente.setDescripcionCorta(dto.getDescripcionCorta());
                 existente.setCategoria(categoria);
-                existente.setProveedorPrincipal(proveedorPrincipal);
 
                 Producto actualizado = servicio.guardarProducto(existente);
                 return ResponseEntity.ok(ProductoMapper.toResponse(actualizado));

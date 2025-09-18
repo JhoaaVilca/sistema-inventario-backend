@@ -20,8 +20,6 @@ public class ProductoResponseDTO {
     private String descripcionCorta; // Descripción opcional
     private Long idCategoria;
     private String nombreCategoria; // 👈 listo para mostrar en el front
-    private Long idProveedorPrincipal;
-    private String nombreProveedorPrincipal; // Nombre del proveedor principal
     
     // Campos calculados para alertas
     private Boolean stockBajo = false; // Indica si el stock está por debajo del mínimo

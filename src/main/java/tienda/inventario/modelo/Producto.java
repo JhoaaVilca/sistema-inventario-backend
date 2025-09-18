@@ -10,7 +10,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@ToString(exclude = {"categoria", "proveedorPrincipal"})
+@ToString(exclude = {"categoria"})
 public class Producto {
 
     @Id
@@ -51,8 +51,4 @@ public class Producto {
     @JsonIgnoreProperties("productos")
     private Categoria categoria;
 
-    @ManyToOne
-    @JoinColumn(name = "id_proveedor_principal")
-    @JsonIgnoreProperties({"productos"})
-    private Proveedor proveedorPrincipal; // Proveedor principal del producto
 }

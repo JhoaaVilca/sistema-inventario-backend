@@ -18,5 +18,4 @@ public class ProductoRequestDTO {
     private Boolean esPerecible = false; // Indica si el producto vence
     private String descripcionCorta; // Descripción opcional
     private Long idCategoria; // 👈 pasamos solo el id de la categoría
-    private Long idProveedorPrincipal; // ID del proveedor principal
 }
