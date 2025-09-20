@@ -59,6 +59,7 @@ public class EntradaServicio implements IEntradaServicio {
                 if (detalle.getFechaVencimiento() != null) {
                     Lote lote = new Lote();
                     lote.setDetalleEntrada(detalle);
+                    lote.setFechaEntrada(nuevaEntrada.getFechaEntrada()); // ✅ AGREGADO: Establecer fecha de entrada
                     lote.setFechaVencimiento(detalle.getFechaVencimiento());
                     lote.setNumeroLote("LOTE-" + detalle.getFechaVencimiento().toString().replace("-", ""));
                     lote.setEstado("Activo");
@@ -80,6 +81,9 @@ public class EntradaServicio implements IEntradaServicio {
             entradaExistente.setProveedor(entrada.getProveedor());
             entradaExistente.setFechaEntrada(entrada.getFechaEntrada());
             entradaExistente.setTotalEntrada(entrada.getTotalEntrada());
+            entradaExistente.setEstado(entrada.getEstado()); // ✅ AGREGADO: Actualizar estado
+            entradaExistente.setNumeroFactura(entrada.getNumeroFactura()); // ✅ AGREGADO: Actualizar número de factura
+            entradaExistente.setObservaciones(entrada.getObservaciones()); // ✅ AGREGADO: Actualizar observaciones
 
             detalleRepositorio.deleteAll(entradaExistente.getDetalles());
             if (entrada.getDetalles() != null) {

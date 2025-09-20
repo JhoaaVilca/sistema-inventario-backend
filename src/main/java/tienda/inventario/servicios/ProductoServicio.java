@@ -44,9 +44,10 @@ public class ProductoServicio implements IProductoServicio {
             String errorMessage = e.getMessage();
             
             // Detectar restricciones específicas de foreign key
-            if (errorMessage != null && errorMessage.contains("FKf1rbsyrsesw6iujxcem9nxvrj")) {
-                throw new RuntimeException("No se puede eliminar el producto porque está siendo usado en detalles de entrada. " +
-                    "Primero debe eliminar todos los registros relacionados en la tabla 'detalles_entrada'.");
+            if (errorMessage != null && (errorMessage.contains("FK") || errorMessage.contains("foreign key"))) {
+                throw new RuntimeException("No se puede eliminar el producto porque está siendo usado en entradas de inventario. " +
+                    "Este producto tiene lotes asociados que deben ser eliminados primero. " +
+                    "Considere marcar el producto como 'inactivo' en lugar de eliminarlo.");
             }
             
             if (errorMessage != null && errorMessage.contains("REFERENCE")) {

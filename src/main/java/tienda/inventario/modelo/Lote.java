@@ -25,6 +25,9 @@ public class Lote {
     @JsonIgnoreProperties("lote")
     private DetalleEntrada detalleEntrada;
 
+    @Column(name = "fecha_entrada")
+    private LocalDate fechaEntrada; // ✅ AGREGADO: Fecha cuando se registró el lote
+
     @Column(name = "fecha_vencimiento")
     private LocalDate fechaVencimiento;
 
