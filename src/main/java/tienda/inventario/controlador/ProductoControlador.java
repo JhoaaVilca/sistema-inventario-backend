@@ -87,11 +87,6 @@ public class ProductoControlador {
                 return ResponseEntity.badRequest().body(error);
             }
 
-            // Validación para productos perecibles
-            if (Boolean.TRUE.equals(dto.getEsPerecible()) && dto.getFechaVencimiento() == null) {
-                error.put("error", "La fecha de vencimiento es obligatoria para productos perecibles");
-                return ResponseEntity.badRequest().body(error);
-            }
 
             if (dto.getFechaIngreso() == null) {
                 error.put("error", "La fecha de ingreso es obligatoria");
@@ -142,7 +137,6 @@ public class ProductoControlador {
                 existente.setStockMinimo(dto.getStockMinimo());
                 existente.setUnidadMedida(dto.getUnidadMedida());
                 existente.setFechaIngreso(dto.getFechaIngreso());
-                existente.setFechaVencimiento(dto.getFechaVencimiento());
                 existente.setEsPerecible(dto.getEsPerecible());
                 existente.setDescripcionCorta(dto.getDescripcionCorta());
                 existente.setCategoria(categoria);
@@ -205,27 +199,8 @@ public class ProductoControlador {
                 .toList();
     }
 
-    // ✅ GET: Obtener productos próximos a vencer
-    @GetMapping("/alertas/proximos-vencer")
-    public List<ProductoResponseDTO> obtenerProductosProximosVencer() {
-        return servicio.listarProductos()
-                .stream()
-                .map(ProductoMapper::toResponse)
-                .filter(producto -> Boolean.TRUE.equals(producto.getProximoVencer()))
-                .toList();
-    }
 
-    // ✅ GET: Obtener productos vencidos
-    @GetMapping("/alertas/vencidos")
-    public List<ProductoResponseDTO> obtenerProductosVencidos() {
-        return servicio.listarProductos()
-                .stream()
-                .map(ProductoMapper::toResponse)
-                .filter(producto -> Boolean.TRUE.equals(producto.getVencido()))
-                .toList();
-    }
-
-    // ✅ GET: Obtener todas las alertas (resumen)
+    // ✅ GET: Obtener resumen de alertas de stock
     @GetMapping("/alertas/resumen")
     public ResponseEntity<Map<String, Object>> obtenerResumenAlertas() {
         List<ProductoResponseDTO> todosProductos = servicio.listarProductos()
@@ -237,19 +212,9 @@ public class ProductoControlador {
                 .filter(p -> Boolean.TRUE.equals(p.getStockBajo()))
                 .count();
 
-        long proximosVencer = todosProductos.stream()
-                .filter(p -> Boolean.TRUE.equals(p.getProximoVencer()))
-                .count();
-
-        long vencidos = todosProductos.stream()
-                .filter(p -> Boolean.TRUE.equals(p.getVencido()))
-                .count();
-
         Map<String, Object> resumen = new HashMap<>();
         resumen.put("stockBajo", stockBajo);
-        resumen.put("proximosVencer", proximosVencer);
-        resumen.put("vencidos", vencidos);
-        resumen.put("totalAlertas", stockBajo + proximosVencer + vencidos);
+        resumen.put("totalProductos", todosProductos.size());
 
         return ResponseEntity.ok(resumen);
     }

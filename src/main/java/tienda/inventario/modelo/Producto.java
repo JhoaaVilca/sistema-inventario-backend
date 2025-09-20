@@ -37,9 +37,6 @@ public class Producto {
     @Column(name = "fecha_ingreso") // 👈 coincide con la BD
     private LocalDate fechaIngreso;
 
-    @Column(name = "fecha_vencimiento")
-    private LocalDate fechaVencimiento; // Para productos perecibles
-
     @Column(name = "es_perecible")
     private Boolean esPerecible = false; // Indica si el producto vence
 

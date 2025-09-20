@@ -8,9 +8,11 @@ import org.springframework.core.io.UrlResource;
 import tienda.inventario.modelo.DetalleEntrada;
 import tienda.inventario.modelo.Entrada;
 import tienda.inventario.modelo.Producto;
+import tienda.inventario.modelo.Lote;
 import tienda.inventario.repositorio.DetalleEntradaRepositorio;
 import tienda.inventario.repositorio.EntradaRepositorio;
 import tienda.inventario.repositorio.ProductoRepositorio;
+import tienda.inventario.repositorio.LoteRepositorio;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -32,6 +34,9 @@ public class EntradaServicio implements IEntradaServicio {
     @Autowired
     private ProductoRepositorio productoRepositorio;
 
+    @Autowired
+    private LoteRepositorio loteRepositorio;
+
     @Override
     public Entrada guardarEntrada(Entrada entrada) {
         if (entrada.getDetalles() != null) {
@@ -48,6 +53,16 @@ public class EntradaServicio implements IEntradaServicio {
                     Integer stockActual = productoBD.getStock() != null ? productoBD.getStock() : 0;
                     productoBD.setStock(stockActual + detalle.getCantidad());
                     productoRepositorio.save(productoBD);
+                }
+
+                // Crear lote automáticamente si hay fecha de vencimiento
+                if (detalle.getFechaVencimiento() != null) {
+                    Lote lote = new Lote();
+                    lote.setDetalleEntrada(detalle);
+                    lote.setFechaVencimiento(detalle.getFechaVencimiento());
+                    lote.setNumeroLote("LOTE-" + detalle.getFechaVencimiento().toString().replace("-", ""));
+                    lote.setEstado("Activo");
+                    loteRepositorio.save(lote);
                 }
             }
         }

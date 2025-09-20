@@ -1,8 +1,10 @@
 package tienda.inventario.modelo;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "detalles_entrada")
@@ -30,4 +32,11 @@ public class DetalleEntrada {
     private Double precioUnitario;
 
     private Double subtotal;
+
+    @Column(name = "fecha_vencimiento")
+    private LocalDate fechaVencimiento; // Fecha de vencimiento del lote
+
+    @OneToOne(mappedBy = "detalleEntrada", cascade = CascadeType.ALL)
+    @JsonIgnoreProperties("detalleEntrada")
+    private Lote lote;
 }

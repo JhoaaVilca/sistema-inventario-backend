@@ -14,7 +14,6 @@ public class ProductoRequestDTO {
     private Integer stockMinimo; // Stock mínimo para alertas
     private String unidadMedida; // unidad, kg, litro, etc.
     private LocalDate fechaIngreso;
-    private LocalDate fechaVencimiento; // Para productos perecibles
     private Boolean esPerecible = false; // Indica si el producto vence
     private String descripcionCorta; // Descripción opcional
     private Long idCategoria; // 👈 pasamos solo el id de la categoría
