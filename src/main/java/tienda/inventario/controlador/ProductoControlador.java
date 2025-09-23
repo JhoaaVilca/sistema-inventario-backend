@@ -17,7 +17,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/productos")
-@CrossOrigin(origins = "http://localhost:3001") // Solo mientras desarrollas el frontend local
 public class ProductoControlador {
 
     private final IProductoServicio servicio;
