@@ -7,13 +7,18 @@ import tienda.inventario.dto.ProductoResponseDTO;
 import tienda.inventario.mapper.ProductoMapper;
 import tienda.inventario.modelo.Categoria;
 import tienda.inventario.modelo.Producto;
+import tienda.inventario.modelo.DetalleEntrada;
+import tienda.inventario.modelo.Lote;
 import tienda.inventario.repositorio.CategoriaRepositorio;
 import tienda.inventario.servicios.IProductoServicio;
+import tienda.inventario.repositorio.DetalleEntradaRepositorio;
+import tienda.inventario.repositorio.LoteRepositorio;
 
 import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/productos")
@@ -21,10 +26,16 @@ public class ProductoControlador {
 
     private final IProductoServicio servicio;
     private final CategoriaRepositorio categoriaRepositorio;
+    private final DetalleEntradaRepositorio detalleEntradaRepositorio;
+    private final LoteRepositorio loteRepositorio;
 
-    public ProductoControlador(IProductoServicio servicio, CategoriaRepositorio categoriaRepositorio) {
+    public ProductoControlador(IProductoServicio servicio, CategoriaRepositorio categoriaRepositorio,
+                               DetalleEntradaRepositorio detalleEntradaRepositorio,
+                               LoteRepositorio loteRepositorio) {
         this.servicio = servicio;
         this.categoriaRepositorio = categoriaRepositorio;
+        this.detalleEntradaRepositorio = detalleEntradaRepositorio;
+        this.loteRepositorio = loteRepositorio;
     }
 
     // ✅ GET: Listar todos los productos
@@ -103,6 +114,32 @@ public class ProductoControlador {
             Producto producto = ProductoMapper.toEntity(dto, categoria);
 
             Producto guardado = servicio.guardarProducto(producto);
+
+            // Crear lote inicial si el producto tiene stock inicial > 0 y no existen lotes aún
+            try {
+                if (dto.getStock() != null && dto.getStock() > 0) {
+                    DetalleEntrada det = new DetalleEntrada();
+                    det.setProducto(guardado);
+                    det.setCantidad(dto.getStock());
+                    det.setPrecioUnitario(dto.getPrecioCompra());
+                    det.setSubtotal(dto.getPrecioCompra() != null ? dto.getPrecioCompra() * dto.getStock() : null);
+                    det.setFechaVencimiento(null); // stock inicial sin vencimiento
+
+                    Lote lote = new Lote();
+                    lote.setNumeroLote("INICIAL-" + LocalDate.now());
+                    lote.setDetalleEntrada(det);
+                    lote.setFechaEntrada(LocalDate.now());
+                    lote.setFechaVencimiento(null);
+                    lote.setEstado("Activo");
+
+                    det.setLote(lote);
+
+                    // Guardar detalle (cascada guarda el lote)
+                    detalleEntradaRepositorio.save(det);
+                }
+            } catch (Exception e) {
+                System.err.println("No se pudo crear lote inicial para el producto: " + e.getMessage());
+            }
 
             ProductoResponseDTO resp = ProductoMapper.toResponse(guardado);
             return ResponseEntity.created(URI.create("/api/productos/" + guardado.getIdProducto())).body(resp);

@@ -5,16 +5,23 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import tienda.inventario.modelo.Lote;
 import tienda.inventario.repositorio.LoteRepositorio;
+import tienda.inventario.repositorio.ProductoRepositorio;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
+@CrossOrigin(origins = "http://localhost:3001")
 @RequestMapping("/api/lotes")
 public class LoteControlador {
 
     @Autowired
     private LoteRepositorio loteRepositorio;
+
+    @Autowired
+    private ProductoRepositorio productoRepositorio;
 
     // Obtener lotes por producto
     @GetMapping("/producto/{idProducto}")
@@ -63,6 +70,45 @@ public class LoteControlador {
         return ResponseEntity.ok(resumen);
     }
 
+    // Dar de baja un lote (marca estado distinto de 'Activo' para excluir de stock)
+    @PostMapping("/{id}/baja")
+    @Transactional
+    public ResponseEntity<?> darDeBaja(@PathVariable("id") Long idLote, @RequestBody(required = false) BajaRequest request) {
+        Optional<Lote> opt = loteRepositorio.findById(idLote);
+        if (opt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Lote lote = opt.get();
+        String estadoAnterior = lote.getEstado();
+        // Marcar como "Baja" (puedes usar "Inactivo" si prefieres)
+        lote.setEstado("Baja");
+        loteRepositorio.save(lote);
+        try { loteRepositorio.flush(); } catch (Exception ignore) {}
+
+        // Ajustar stock del producto solo si el lote estaba Activo antes
+        try {
+            if ("Activo".equalsIgnoreCase(estadoAnterior)) {
+                var detalle = lote.getDetalleEntrada();
+                if (detalle != null && detalle.getProducto() != null && detalle.getCantidad() != null) {
+                    var producto = detalle.getProducto();
+                    Integer actual = producto.getStock() == null ? 0 : producto.getStock();
+                    int nueva = Math.max(0, actual - detalle.getCantidad());
+                    producto.setStock(nueva);
+                    productoRepositorio.save(producto);
+                }
+            }
+        } catch (Exception e) {
+            // Loguear pero no romper la respuesta
+            System.err.println("Error ajustando stock al dar de baja lote: " + e.getMessage());
+        }
+
+        // Nota: Si tienes entidad de Merma/Auditoría, aquí puedes registrar (motivo/observación)
+        // usando request.getMotivo() y request.getObservacion().
+
+        return ResponseEntity.ok().build();
+    }
+
     // Clase interna para el resumen
     public static class AlertaResumenDTO {
         private int totalAlertas;
@@ -78,5 +124,16 @@ public class LoteControlador {
         
         public int getLotesProximosAVencer() { return lotesProximosAVencer; }
         public void setLotesProximosAVencer(int lotesProximosAVencer) { this.lotesProximosAVencer = lotesProximosAVencer; }
+    }
+
+    // DTO para recibir motivo/observación de la baja
+    public static class BajaRequest {
+        private String motivo;
+        private String observacion;
+
+        public String getMotivo() { return motivo; }
+        public void setMotivo(String motivo) { this.motivo = motivo; }
+        public String getObservacion() { return observacion; }
+        public void setObservacion(String observacion) { this.observacion = observacion; }
     }
 }
