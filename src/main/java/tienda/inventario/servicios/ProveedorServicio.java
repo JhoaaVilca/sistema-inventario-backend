@@ -4,6 +4,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import tienda.inventario.modelo.Proveedor;
 import tienda.inventario.repositorio.ProveedorRepositorio;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,9 +23,14 @@ public class ProveedorServicio implements IProveedorServicio {
     }
 
     @Override
-    public List<Proveedor> listarProveedoresActivos() {
+    public Page<Proveedor> listarProveedores(Pageable pageable) {
+        return proveedorRepositorio.findAll(pageable);
+    }
+
+    @Override
+    public Page<Proveedor> listarProveedoresActivos(Pageable pageable) {
         // ✅ solo activos
-        return proveedorRepositorio.findByActivoTrue();
+        return proveedorRepositorio.findByActivoTrue(pageable);
     }
 
     @Override

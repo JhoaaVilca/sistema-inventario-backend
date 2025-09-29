@@ -1,6 +1,13 @@
 package tienda.inventario.controlador;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 import tienda.inventario.dto.ProductoRequestDTO;
 import tienda.inventario.dto.ProductoResponseDTO;
@@ -22,12 +29,15 @@ import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/productos")
+@Validated
 public class ProductoControlador {
 
     private final IProductoServicio servicio;
     private final CategoriaRepositorio categoriaRepositorio;
     private final DetalleEntradaRepositorio detalleEntradaRepositorio;
     private final LoteRepositorio loteRepositorio;
+
+    private static final Logger logger = LoggerFactory.getLogger(ProductoControlador.class);
 
     public ProductoControlador(IProductoServicio servicio, CategoriaRepositorio categoriaRepositorio,
                                DetalleEntradaRepositorio detalleEntradaRepositorio,
@@ -38,13 +48,11 @@ public class ProductoControlador {
         this.loteRepositorio = loteRepositorio;
     }
 
-    // ✅ GET: Listar todos los productos
+    // ✅ GET: Listar productos paginados
     @GetMapping
-    public List<ProductoResponseDTO> listarProductos() {
-        return servicio.listarProductos()
-                .stream()
-                .map(ProductoMapper::toResponse)
-                .toList();
+    public Page<ProductoResponseDTO> listarProductos(@PageableDefault(size = 20, sort = "nombreProducto") Pageable pageable) {
+        return servicio.listarProductos(pageable)
+                .map(ProductoMapper::toResponse);
     }
 
     // ✅ GET: Obtener producto por ID
@@ -58,51 +66,9 @@ public class ProductoControlador {
 
     // ✅ POST: Crear nuevo producto
     @PostMapping
-    public ResponseEntity<?> guardarProducto(@RequestBody ProductoRequestDTO dto) {
+    public ResponseEntity<?> guardarProducto(@Valid @RequestBody ProductoRequestDTO dto) {
         try {
             Map<String, String> error = new HashMap<>();
-
-            if (dto == null) {
-                error.put("error", "Los datos del producto no pueden ser nulos");
-                return ResponseEntity.badRequest().body(error);
-            }
-
-            if (dto.getNombreProducto() == null || dto.getNombreProducto().trim().isEmpty()) {
-                error.put("error", "El nombre del producto es obligatorio");
-                return ResponseEntity.badRequest().body(error);
-            }
-
-            if (dto.getPrecio() == null || dto.getPrecio() <= 0) {
-                error.put("error", "El precio de venta debe ser mayor a 0");
-                return ResponseEntity.badRequest().body(error);
-            }
-
-            if (dto.getPrecioCompra() == null || dto.getPrecioCompra() <= 0) {
-                error.put("error", "El precio de compra debe ser mayor a 0");
-                return ResponseEntity.badRequest().body(error);
-            }
-
-            if (dto.getStock() == null || dto.getStock() < 0) {
-                error.put("error", "El stock no puede ser negativo");
-                return ResponseEntity.badRequest().body(error);
-            }
-
-            if (dto.getStockMinimo() == null || dto.getStockMinimo() < 0) {
-                error.put("error", "El stock mínimo no puede ser negativo");
-                return ResponseEntity.badRequest().body(error);
-            }
-
-            if (dto.getUnidadMedida() == null || dto.getUnidadMedida().trim().isEmpty()) {
-                error.put("error", "La unidad de medida es obligatoria");
-                return ResponseEntity.badRequest().body(error);
-            }
-
-
-            if (dto.getFechaIngreso() == null) {
-                error.put("error", "La fecha de ingreso es obligatoria");
-                return ResponseEntity.badRequest().body(error);
-            }
-
             if (dto.getIdCategoria() == null || dto.getIdCategoria() <= 0) {
                 error.put("error", "Debe seleccionar una categoría válida");
                 return ResponseEntity.badRequest().body(error);
@@ -138,7 +104,7 @@ public class ProductoControlador {
                     detalleEntradaRepositorio.save(det);
                 }
             } catch (Exception e) {
-                System.err.println("No se pudo crear lote inicial para el producto: " + e.getMessage());
+                logger.warn("No se pudo crear lote inicial para el producto: {}", e.getMessage());
             }
 
             ProductoResponseDTO resp = ProductoMapper.toResponse(guardado);
@@ -149,8 +115,7 @@ public class ProductoControlador {
             error.put("error", "Error de validación: " + e.getMessage());
             return ResponseEntity.badRequest().body(error);
         } catch (Exception e) {
-            System.err.println("Error al crear producto: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error al crear producto", e);
             Map<String, String> error = new HashMap<>();
             error.put("error", "Error interno del servidor: " + e.getMessage());
             return ResponseEntity.internalServerError().body(error);
@@ -159,7 +124,7 @@ public class ProductoControlador {
 
     // ✅ PUT: Actualizar producto
     @PutMapping("/{id}")
-    public ResponseEntity<?> actualizarProducto(@PathVariable Long id, @RequestBody ProductoRequestDTO dto) {
+    public ResponseEntity<?> actualizarProducto(@PathVariable Long id, @Valid @RequestBody ProductoRequestDTO dto) {
         return servicio.obtenerProductoPorId(id).map(existente -> {
             try {
                 Categoria categoria = categoriaRepositorio.findById(dto.getIdCategoria())
@@ -228,7 +193,7 @@ public class ProductoControlador {
     // ✅ GET: Obtener productos con stock bajo
     @GetMapping("/alertas/stock-bajo")
     public List<ProductoResponseDTO> obtenerProductosStockBajo() {
-        return servicio.listarProductos()
+        return servicio.listarProductos(org.springframework.data.domain.Pageable.unpaged())
                 .stream()
                 .map(ProductoMapper::toResponse)
                 .filter(producto -> Boolean.TRUE.equals(producto.getStockBajo()))
@@ -239,7 +204,7 @@ public class ProductoControlador {
     // ✅ GET: Obtener resumen de alertas de stock
     @GetMapping("/alertas/resumen")
     public ResponseEntity<Map<String, Object>> obtenerResumenAlertas() {
-        List<ProductoResponseDTO> todosProductos = servicio.listarProductos()
+        List<ProductoResponseDTO> todosProductos = servicio.listarProductos(org.springframework.data.domain.Pageable.unpaged())
                 .stream()
                 .map(ProductoMapper::toResponse)
                 .toList();

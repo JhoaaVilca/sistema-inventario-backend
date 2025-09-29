@@ -1,6 +1,13 @@
 package tienda.inventario.controlador;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 import tienda.inventario.dto.ClienteRequestDTO;
 import tienda.inventario.dto.ClienteResponseDTO;
@@ -18,6 +25,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/clientes")
 @CrossOrigin(origins = "http://localhost:3001")
+@Validated
 public class ClienteControlador {
 
     private final IClienteServicio servicio;
@@ -28,19 +36,19 @@ public class ClienteControlador {
         this.busquedaService = busquedaService;
     }
 
-    // GET: Listar todos los clientes
+    private static final Logger logger = LoggerFactory.getLogger(ClienteControlador.class);
+
+    // GET: Listar todos los clientes (paginado)
     @GetMapping
-    public List<ClienteResponseDTO> listarClientes() {
-        return servicio.listarClientes()
-                .stream()
-                .map(this::toResponseDTO)
-                .collect(Collectors.toList());
+    public Page<ClienteResponseDTO> listarClientes(@PageableDefault(size = 20, sort = "idCliente", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
+        return servicio.listarClientes(pageable)
+                .map(this::toResponseDTO);
     }
 
     // GET: Listar solo clientes activos
     @GetMapping("/activos")
     public List<ClienteResponseDTO> listarClientesActivos() {
-        return servicio.listarClientesActivos()
+        return servicio.listarClientesActivos(org.springframework.data.domain.Pageable.unpaged())
                 .stream()
                 .map(this::toResponseDTO)
                 .collect(Collectors.toList());
@@ -88,7 +96,7 @@ public class ClienteControlador {
 
     // POST: Crear nuevo cliente
     @PostMapping
-    public ResponseEntity<?> guardarCliente(@RequestBody ClienteRequestDTO dto) {
+    public ResponseEntity<?> guardarCliente(@Valid @RequestBody ClienteRequestDTO dto) {
         try {
             Map<String, String> error = new HashMap<>();
 
@@ -118,7 +126,7 @@ public class ClienteControlador {
             error.put("error", "Error de validación: " + e.getMessage());
             return ResponseEntity.badRequest().body(error);
         } catch (Exception e) {
-            System.err.println("Error al crear cliente: " + e.getMessage());
+            logger.error("Error al crear cliente", e);
             Map<String, String> error = new HashMap<>();
             error.put("error", "Error interno del servidor");
             return ResponseEntity.internalServerError().body(error);
@@ -127,7 +135,7 @@ public class ClienteControlador {
 
     // PUT: Actualizar cliente existente
     @PutMapping("/{id}")
-    public ResponseEntity<?> actualizarCliente(@PathVariable Long id, @RequestBody ClienteRequestDTO dto) {
+    public ResponseEntity<?> actualizarCliente(@PathVariable Long id, @Valid @RequestBody ClienteRequestDTO dto) {
         try {
             Map<String, String> error = new HashMap<>();
 
@@ -157,7 +165,7 @@ public class ClienteControlador {
             error.put("error", "Error de validación: " + e.getMessage());
             return ResponseEntity.badRequest().body(error);
         } catch (Exception e) {
-            System.err.println("Error al actualizar cliente: " + e.getMessage());
+            logger.error("Error al actualizar cliente", e);
             Map<String, String> error = new HashMap<>();
             error.put("error", "Error interno del servidor");
             return ResponseEntity.internalServerError().body(error);
@@ -177,7 +185,7 @@ public class ClienteControlador {
             error.put("error", "Error de validación: " + e.getMessage());
             return ResponseEntity.badRequest().body(error);
         } catch (Exception e) {
-            System.err.println("Error al eliminar cliente: " + e.getMessage());
+            logger.error("Error al eliminar cliente", e);
             Map<String, String> error = new HashMap<>();
             error.put("error", "Error interno del servidor");
             return ResponseEntity.internalServerError().body(error);

@@ -3,6 +3,8 @@ package tienda.inventario.servicios;
 import org.springframework.stereotype.Service;
 import tienda.inventario.modelo.Cliente;
 import tienda.inventario.repositorio.ClienteRepositorio;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
@@ -22,8 +24,13 @@ public class ClienteServicio implements IClienteServicio {
     }
 
     @Override
-    public List<Cliente> listarClientesActivos() {
-        return repositorio.findClientesActivos();
+    public Page<Cliente> listarClientes(Pageable pageable) {
+        return repositorio.findAll(pageable);
+    }
+
+    @Override
+    public Page<Cliente> listarClientesActivos(Pageable pageable) {
+        return repositorio.findClientesActivos(pageable);
     }
 
     @Override

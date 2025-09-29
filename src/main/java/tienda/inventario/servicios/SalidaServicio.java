@@ -9,6 +9,8 @@ import tienda.inventario.modelo.Producto;
 import tienda.inventario.repositorio.DetalleSalidaRepositorio;
 import tienda.inventario.repositorio.SalidaRepositorio;
 import tienda.inventario.repositorio.ProductoRepositorio;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -77,6 +79,11 @@ public class SalidaServicio implements ISalidaServicio {
     @Override
     public List<Salida> listarSalidas() {
         return salidaRepositorio.findAllByOrderByIdSalidaDesc();
+    }
+
+    @Override
+    public Page<Salida> listarSalidas(Pageable pageable) {
+        return salidaRepositorio.findAll(pageable);
     }
 
     @Override

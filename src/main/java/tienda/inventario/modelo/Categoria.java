@@ -1,6 +1,7 @@
 package tienda.inventario.modelo;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 import lombok.*;
 import java.util.List;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -18,9 +19,12 @@ public class Categoria {
     private Long idCategoria;
 
     @Column(nullable = false, length = 100)
+    @NotBlank(message = "El nombre de la categoría es obligatorio")
+    @Size(max = 100, message = "El nombre de la categoría no debe exceder 100 caracteres")
     private String nombre;
 
     @Column(length = 255)
+    @Size(max = 255, message = "La descripción no debe exceder 255 caracteres")
     private String descripcion;
 
     @Column(nullable = false)

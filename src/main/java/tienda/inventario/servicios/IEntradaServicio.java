@@ -3,12 +3,15 @@ package tienda.inventario.servicios;
 import tienda.inventario.modelo.Entrada;
 import java.time.LocalDate;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.core.io.Resource;
 
 public interface IEntradaServicio {
     Entrada guardarEntrada(Entrada entrada);
     List<Entrada> listarEntradas();
+    Page<Entrada> listarEntradas(Pageable pageable);
     Entrada actualizarEntrada(Long id, Entrada entrada);
     void eliminarEntrada(Long id);
 

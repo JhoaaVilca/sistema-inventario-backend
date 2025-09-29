@@ -3,6 +3,8 @@ package tienda.inventario.servicios;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import tienda.inventario.modelo.Producto;
 import tienda.inventario.repositorio.ProductoRepositorio;
 
@@ -15,6 +17,11 @@ public class ProductoServicio implements IProductoServicio {
 
     @Autowired
     private ProductoRepositorio repositorio;
+
+    @Override
+    public Page<Producto> listarProductos(Pageable pageable) {
+        return repositorio.findAll(pageable);
+    }
 
     @Override
     public List<Producto> listarProductos() {

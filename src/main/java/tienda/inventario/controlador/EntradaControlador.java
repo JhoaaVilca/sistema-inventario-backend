@@ -9,6 +9,9 @@ import tienda.inventario.servicios.IEntradaServicio;
 
 import java.time.LocalDate;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,8 +42,8 @@ public class EntradaControlador {
     }
 
     @GetMapping
-    public List<Entrada> listar() {
-        return entradaServicio.listarEntradas();
+    public Page<Entrada> listar(@PageableDefault(size = 20, sort = "idEntrada", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
+        return entradaServicio.listarEntradas(pageable);
     }
 
     @PutMapping("/{id}")

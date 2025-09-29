@@ -21,6 +21,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Service
 public class EntradaServicio implements IEntradaServicio {
@@ -73,6 +75,11 @@ public class EntradaServicio implements IEntradaServicio {
     @Override
     public List<Entrada> listarEntradas() {
         return entradaRepositorio.findAll();
+    }
+
+    @Override
+    public Page<Entrada> listarEntradas(Pageable pageable) {
+        return entradaRepositorio.findAll(pageable);
     }
 
     @Override

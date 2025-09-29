@@ -15,6 +15,9 @@ import tienda.inventario.modelo.Cliente;
 
 import java.time.LocalDate;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import java.util.stream.Collectors;
 import org.springframework.http.ResponseEntity;
 import org.slf4j.Logger;
@@ -74,11 +77,10 @@ public class SalidaControlador {
 		}
 	}
 
-	@GetMapping
-	public List<SalidaResponseDTO> listar() {
-		var salidas = salidaServicio.listarSalidas();
-		return salidas.stream().map(SalidaMapper::toResponse).collect(Collectors.toList());
-	}
+    @GetMapping
+    public Page<SalidaResponseDTO> listar(@PageableDefault(size = 20, sort = "idSalida", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
+        return salidaServicio.listarSalidas(pageable).map(SalidaMapper::toResponse);
+    }
 
 	@PutMapping("/{id}")
 	public ResponseEntity<?> actualizarSalida(@PathVariable Long id, @Valid @RequestBody SalidaRequestDTO request){

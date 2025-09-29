@@ -2,6 +2,11 @@ package tienda.inventario.controlador;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.validation.annotation.Validated;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 import tienda.inventario.modelo.Proveedor;
 import tienda.inventario.servicios.ApiConsultaService;
@@ -16,6 +21,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/proveedores")
 @CrossOrigin(origins = "http://localhost:3001")
+@Validated
 public class ProveedorControlador {
 
     private static final Logger logger = LoggerFactory.getLogger(ProveedorControlador.class);
@@ -28,12 +34,12 @@ public class ProveedorControlador {
 
     // ✅ Listar TODOS (activos e inactivos)
     @GetMapping
-    public List<Proveedor> listarProveedores() {
-        return proveedorServicio.listarProveedores();
+    public Page<Proveedor> listarProveedores(@PageableDefault(size = 20, sort = "idProveedor", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
+        return proveedorServicio.listarProveedores(pageable);
     }
 
     @PostMapping
-    public Proveedor guardarProveedor(@RequestBody Proveedor proveedor) {
+    public Proveedor guardarProveedor(@Valid @RequestBody Proveedor proveedor) {
         return proveedorServicio.guardarProveedor(proveedor);
     }
 
@@ -50,7 +56,7 @@ public class ProveedorControlador {
     }
 
     @PutMapping("/{id}")
-    public Proveedor actualizarProveedor(@PathVariable Long id, @RequestBody Proveedor proveedor) {
+    public Proveedor actualizarProveedor(@PathVariable Long id, @Valid @RequestBody Proveedor proveedor) {
         return proveedorServicio.actualizarProveedor(id, proveedor);
     }
 
@@ -60,8 +66,8 @@ public class ProveedorControlador {
                 .orElseThrow(() -> new RuntimeException("Proveedor no encontrado con documento: " + numero));
     }
     @GetMapping("/activos")
-    public List<Proveedor> listarProveedoresActivos() {
-        return proveedorServicio.listarProveedoresActivos();
+    public Page<Proveedor> listarProveedoresActivos(@PageableDefault(size = 1000) Pageable pageable) {
+        return proveedorServicio.listarProveedoresActivos(pageable);
     }
 
 

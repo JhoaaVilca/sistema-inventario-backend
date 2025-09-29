@@ -2,6 +2,13 @@ package tienda.inventario.controlador;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 import tienda.inventario.dto.CategoriaRequestDTO;
 import tienda.inventario.dto.CategoriaResponseDTO;
@@ -18,23 +25,23 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/categorias")
 @CrossOrigin(origins = "http://localhost:3001") // Solo en desarrollo
+@Validated
 public class CategoriaControlador {
 
     @Autowired
     private ICategoriaServicio servicio;
 
-    // GET: Listar todas las categorías
+    private static final Logger logger = LoggerFactory.getLogger(CategoriaControlador.class);
+
+    // GET: Listar todas las categorías (paginado)
     @GetMapping
-    public ResponseEntity<List<CategoriaResponseDTO>> listarCategorias() {
+    public ResponseEntity<Page<CategoriaResponseDTO>> listarCategorias(@PageableDefault(size = 20, sort = "nombre") Pageable pageable) {
         try {
-            List<CategoriaResponseDTO> categorias = servicio.listarCategorias()
-                    .stream()
-                    .map(CategoriaMapper::toResponse)
-                    .collect(Collectors.toList());
+            Page<CategoriaResponseDTO> categorias = servicio.listarCategorias(pageable)
+                    .map(CategoriaMapper::toResponse);
             return ResponseEntity.ok(categorias);
         } catch (Exception e) {
-            System.err.println("Error al listar categorías: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error al listar categorías", e);
             return ResponseEntity.status(500).build();
         }
     }
@@ -43,7 +50,7 @@ public class CategoriaControlador {
     @GetMapping("/activas")
     public ResponseEntity<List<CategoriaResponseDTO>> listarCategoriasActivas() {
         try {
-            List<CategoriaResponseDTO> categorias = servicio.listarCategorias()
+            List<CategoriaResponseDTO> categorias = servicio.listarCategorias(org.springframework.data.domain.Pageable.unpaged())
                     .stream()
                     .filter(Categoria::isActivo)
                     .map(CategoriaMapper::toResponse)
@@ -66,14 +73,13 @@ public class CategoriaControlador {
 
     // POST: Crear nueva categoría
     @PostMapping
-    public ResponseEntity<CategoriaResponseDTO> guardarCategoria(@RequestBody CategoriaRequestDTO dto) {
+    public ResponseEntity<CategoriaResponseDTO> guardarCategoria(@Valid @RequestBody CategoriaRequestDTO dto) {
         try {
             Categoria categoria = CategoriaMapper.toEntity(dto);
             Categoria guardada = servicio.guardarCategoria(categoria);
             return ResponseEntity.ok(CategoriaMapper.toResponse(guardada));
         } catch (Exception e) {
-            System.err.println("Error al guardar categoría: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error al guardar categoría", e);
             return ResponseEntity.status(500).build();
         }
     }
@@ -82,7 +88,7 @@ public class CategoriaControlador {
     @PutMapping("/{id}")
     public ResponseEntity<CategoriaResponseDTO> actualizarCategoria(
             @PathVariable Long id,
-            @RequestBody CategoriaRequestDTO dto) {
+            @Valid @RequestBody CategoriaRequestDTO dto) {
 
         Optional<Categoria> categoriaOptional = servicio.obtenerCategoriaPorId(id);
         if (categoriaOptional.isEmpty()) {
@@ -100,8 +106,7 @@ public class CategoriaControlador {
             Categoria actualizado = servicio.guardarCategoria(categoria);
             return ResponseEntity.ok(CategoriaMapper.toResponse(actualizado));
         } catch (Exception e) {
-            System.err.println("Error al actualizar categoría: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error al actualizar categoría", e);
             return ResponseEntity.status(500).build();
         }
     }
