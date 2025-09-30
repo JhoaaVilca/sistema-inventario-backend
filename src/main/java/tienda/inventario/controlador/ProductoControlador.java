@@ -50,7 +50,7 @@ public class ProductoControlador {
 
     // ✅ GET: Listar productos paginados
     @GetMapping
-    public Page<ProductoResponseDTO> listarProductos(@PageableDefault(size = 20, sort = "nombreProducto") Pageable pageable) {
+    public Page<ProductoResponseDTO> listarProductos(@PageableDefault(size = 20, sort = "idProducto", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
         return servicio.listarProductos(pageable)
                 .map(ProductoMapper::toResponse);
     }

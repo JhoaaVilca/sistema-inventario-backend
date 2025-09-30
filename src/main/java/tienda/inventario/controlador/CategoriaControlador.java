@@ -35,7 +35,7 @@ public class CategoriaControlador {
 
     // GET: Listar todas las categorías (paginado)
     @GetMapping
-    public ResponseEntity<Page<CategoriaResponseDTO>> listarCategorias(@PageableDefault(size = 20, sort = "nombre") Pageable pageable) {
+    public ResponseEntity<Page<CategoriaResponseDTO>> listarCategorias(@PageableDefault(size = 20, sort = "idCategoria", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
         try {
             Page<CategoriaResponseDTO> categorias = servicio.listarCategorias(pageable)
                     .map(CategoriaMapper::toResponse);
@@ -121,26 +121,26 @@ public class CategoriaControlador {
                 error.put("error", "Categoría no encontrada con ID: " + id);
                 return ResponseEntity.notFound().build();
             }
-            
+
             // Intentar eliminar la categoría
             servicio.eliminarCategoria(id);
-            
+
             Map<String, String> respuesta = new HashMap<>();
             respuesta.put("mensaje", "Categoría eliminada exitosamente");
             return ResponseEntity.ok(respuesta);
-            
+
         } catch (IllegalArgumentException e) {
             // Categoría no encontrada
             Map<String, String> error = new HashMap<>();
             error.put("error", e.getMessage());
             return ResponseEntity.badRequest().body(error);
-            
+
         } catch (RuntimeException e) {
             // Error al eliminar (restricciones de BD, etc.)
             Map<String, String> error = new HashMap<>();
             error.put("error", e.getMessage());
             return ResponseEntity.badRequest().body(error);
-            
+
         } catch (Exception e) {
             // Error inesperado
             Map<String, String> error = new HashMap<>();
