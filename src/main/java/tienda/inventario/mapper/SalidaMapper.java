@@ -12,6 +12,8 @@ public class SalidaMapper {
 		salida.setFechaSalida(dto.getFechaSalida());
 		salida.setCliente(cliente);
 		salida.setTipoVenta(dto.getTipoVenta() != null ? dto.getTipoVenta() : "CONTADO");
+		// Mapear fecha de pago de crédito si viene
+		salida.setFechaPagoCredito(dto.getFechaPagoCredito());
 		// totalSalida: si viene en DTO lo usamos, de lo contrario se calcula abajo
 		if (dto.getTotalSalida() != null && dto.getTotalSalida() > 0) {
 			salida.setTotalSalida(dto.getTotalSalida());
@@ -55,6 +57,8 @@ public class SalidaMapper {
 		}
 		
 		dto.setTipoVenta(salida.getTipoVenta());
+		// Exponer fecha de pago de crédito si existe
+		dto.setFechaPagoCredito(salida.getFechaPagoCredito());
 		
 		dto.setDetalles(salida.getDetalles() == null ? null : salida.getDetalles().stream().map(det -> {
 			DetalleSalidaResponseDTO d = new DetalleSalidaResponseDTO();

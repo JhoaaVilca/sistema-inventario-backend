@@ -33,6 +33,9 @@ public class Salida {
     private Cliente cliente;
 
     private String tipoVenta; // "CONTADO" o "CREDITO"
+
+    // Para ventas a crédito: fecha comprometida de pago
+    private java.time.LocalDate fechaPagoCredito;
 }
 
 

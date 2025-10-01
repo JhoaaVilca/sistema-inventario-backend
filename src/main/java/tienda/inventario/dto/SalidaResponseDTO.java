@@ -16,6 +16,8 @@ public class SalidaResponseDTO {
     private String dniCliente;
     private String nombreCliente;
     private String tipoVenta;
+    // Para ventas a crédito
+    private LocalDate fechaPagoCredito;
 }
 
 

@@ -10,6 +10,8 @@ import tienda.inventario.repositorio.DetalleSalidaRepositorio;
 import tienda.inventario.repositorio.SalidaRepositorio;
 import tienda.inventario.repositorio.ProductoRepositorio;
 import tienda.inventario.repositorio.LoteRepositorio;
+import tienda.inventario.repositorio.CreditoRepositorio;
+import tienda.inventario.modelo.Credito;
 import tienda.inventario.modelo.Lote;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -31,6 +33,9 @@ public class SalidaServicio implements ISalidaServicio {
 
     @Autowired
     private LoteRepositorio loteRepositorio;
+
+    @Autowired
+    private CreditoRepositorio creditoRepositorio;
 
     @Override
     @Transactional
@@ -99,6 +104,23 @@ public class SalidaServicio implements ISalidaServicio {
                 productoRepositorio.save(productoBD);
             }
         }
+        // Si es venta a crédito, crear registro de crédito asociado
+        if ("CREDITO".equalsIgnoreCase(nuevaSalida.getTipoVenta())) {
+            Credito credito = new Credito();
+            credito.setSalida(nuevaSalida);
+            credito.setCliente(nuevaSalida.getCliente());
+            credito.setMontoTotal(nuevaSalida.getTotalSalida());
+            credito.setSaldoPendiente(nuevaSalida.getTotalSalida());
+            credito.setFechaInicio(nuevaSalida.getFechaSalida());
+            // fecha vencimiento: tomarla desde fechaPagoCredito si llegó; de lo contrario null
+            if (nuevaSalida.getFechaPagoCredito() != null) {
+                credito.setFechaVencimiento(nuevaSalida.getFechaPagoCredito());
+            }
+            // Nota: Salida no guarda fechaPagoCredito; si se requiere persistirla en Salida, agregar campo. Aquí solo lo dejamos null si no existe flujo.
+            credito.setEstado("PENDIENTE");
+            creditoRepositorio.save(credito);
+        }
+
         return nuevaSalida;
     }
 
