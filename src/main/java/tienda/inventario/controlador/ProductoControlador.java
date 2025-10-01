@@ -78,30 +78,47 @@ public class ProductoControlador {
                     .orElseThrow(() -> new IllegalArgumentException("Categoría no encontrada con ID: " + dto.getIdCategoria()));
 
             Producto producto = ProductoMapper.toEntity(dto, categoria);
+            // Log diagnóstico de campos críticos
+            logger.info("Creando producto: perecible={}, stock={}, fechaVencimientoInicial={}",
+                    dto.getEsPerecible(), dto.getStock(), dto.getFechaVencimientoInicial());
+            // Si llega una fecha de vencimiento inicial, marcamos como perecible
+            if (dto.getFechaVencimientoInicial() != null) {
+                producto.setEsPerecible(true);
+            }
 
             Producto guardado = servicio.guardarProducto(producto);
 
-            // Crear lote inicial si el producto tiene stock inicial > 0 y no existen lotes aún
+            // Crear lote inicial si el producto tiene stock inicial > 0
             try {
                 if (dto.getStock() != null && dto.getStock() > 0) {
+                    // Determinar perecible efectivo (si llegó fecha, es perecible)
+                    boolean esPerecibleEfectivo = Boolean.TRUE.equals(dto.getEsPerecible()) || dto.getFechaVencimientoInicial() != null;
+                    // Validación: si es perecible efectivo, se requiere fecha de vencimiento inicial
+                    if (esPerecibleEfectivo && dto.getFechaVencimientoInicial() == null) {
+                        error.put("error", "Debe ingresar fecha de vencimiento para el lote inicial de un producto perecible");
+                        return ResponseEntity.badRequest().body(error);
+                    }
                     DetalleEntrada det = new DetalleEntrada();
                     det.setProducto(guardado);
                     det.setCantidad(dto.getStock());
                     det.setPrecioUnitario(dto.getPrecioCompra());
                     det.setSubtotal(dto.getPrecioCompra() != null ? dto.getPrecioCompra() * dto.getStock() : null);
-                    det.setFechaVencimiento(null); // stock inicial sin vencimiento
+                    det.setFechaVencimiento(dto.getFechaVencimientoInicial());
 
+                    // Guardar primero el detalle para obtener su ID
+                    DetalleEntrada detGuardado = detalleEntradaRepositorio.save(det);
+
+                    // Crear y guardar el lote con la relación al detalle guardado
                     Lote lote = new Lote();
                     lote.setNumeroLote("INICIAL-" + LocalDate.now());
-                    lote.setDetalleEntrada(det);
+                    lote.setDetalleEntrada(detGuardado);
                     lote.setFechaEntrada(LocalDate.now());
-                    lote.setFechaVencimiento(null);
+                    lote.setFechaVencimiento(dto.getFechaVencimientoInicial());
                     lote.setEstado("Activo");
-
-                    det.setLote(lote);
-
-                    // Guardar detalle (cascada guarda el lote)
-                    detalleEntradaRepositorio.save(det);
+                    // Asegurar cantidadDisponible explícita para no depender solo de @PrePersist
+                    lote.setCantidadDisponible(detGuardado.getCantidad());
+                    detGuardado.setLote(lote);
+                    loteRepositorio.save(lote);
                 }
             } catch (Exception e) {
                 logger.warn("No se pudo crear lote inicial para el producto: {}", e.getMessage());

@@ -12,6 +12,10 @@ public class SalidaMapper {
 		salida.setFechaSalida(dto.getFechaSalida());
 		salida.setCliente(cliente);
 		salida.setTipoVenta(dto.getTipoVenta() != null ? dto.getTipoVenta() : "CONTADO");
+		// totalSalida: si viene en DTO lo usamos, de lo contrario se calcula abajo
+		if (dto.getTotalSalida() != null && dto.getTotalSalida() > 0) {
+			salida.setTotalSalida(dto.getTotalSalida());
+		}
 		
 		List<DetalleSalida> detalles = dto.getDetalles().stream().map(detDto -> {
 			DetalleSalida det = new DetalleSalida();
@@ -25,6 +29,14 @@ public class SalidaMapper {
 			return det;
 		}).collect(Collectors.toList());
 		salida.setDetalles(detalles);
+
+		// Si no llegó total, calcularlo desde los detalles
+		if (salida.getTotalSalida() == null && detalles != null) {
+			double total = detalles.stream()
+					.mapToDouble(d -> (d.getCantidad() != null ? d.getCantidad() : 0) * (d.getPrecioUnitario() != null ? d.getPrecioUnitario() : 0.0))
+					.sum();
+			salida.setTotalSalida(total);
+		}
 		return salida;
 	}
 
