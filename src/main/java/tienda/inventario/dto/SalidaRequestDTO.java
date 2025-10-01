@@ -9,13 +9,16 @@ import java.util.List;
 @Data
 public class SalidaRequestDTO {
     @NotNull
-    @PastOrPresent
     private LocalDate fechaSalida;
 
-    @NotEmpty
+    @NotNull
+    @Size(min = 1, message = "Debe tener al menos un detalle")
     private List<DetalleSalidaRequestDTO> detalles;
     
+    @NotNull
     private ClienteReferenciaDTO cliente; // Cliente asociado
+    
+    @NotBlank
     private String tipoVenta; // "CONTADO" o "CREDITO"
 }
 

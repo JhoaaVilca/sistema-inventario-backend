@@ -34,6 +34,9 @@ public class Lote {
     @Column(name = "estado", length = 20)
     private String estado = "Activo"; // Activo, Vencido, Agotado
 
+    @Column(name = "cantidad_disponible")
+    private Integer cantidadDisponible; // cantidad restante disponible para consumo por lote
+
     // Método para verificar si está próximo a vencer (30 días)
     public boolean estaProximoAVencer() {
         if (fechaVencimiento == null) return false;
@@ -51,5 +54,16 @@ public class Lote {
     public long diasHastaVencimiento() {
         if (fechaVencimiento == null) return Long.MAX_VALUE;
         return java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), fechaVencimiento);
+    }
+
+    @PrePersist
+    public void prePersist() {
+        // Inicializar cantidadDisponible con la cantidad del detalle de entrada si no fue seteada
+        if (cantidadDisponible == null && detalleEntrada != null && detalleEntrada.getCantidad() != null) {
+            cantidadDisponible = detalleEntrada.getCantidad();
+        }
+        if (estado == null) {
+            estado = "Activo";
+        }
     }
 }

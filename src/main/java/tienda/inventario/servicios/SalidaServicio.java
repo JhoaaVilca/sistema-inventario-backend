@@ -9,6 +9,8 @@ import tienda.inventario.modelo.Producto;
 import tienda.inventario.repositorio.DetalleSalidaRepositorio;
 import tienda.inventario.repositorio.SalidaRepositorio;
 import tienda.inventario.repositorio.ProductoRepositorio;
+import tienda.inventario.repositorio.LoteRepositorio;
+import tienda.inventario.modelo.Lote;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -27,6 +29,9 @@ public class SalidaServicio implements ISalidaServicio {
     @Autowired
     private ProductoRepositorio productoRepositorio;
 
+    @Autowired
+    private LoteRepositorio loteRepositorio;
+
     @Override
     @Transactional
     public Salida guardarSalida(Salida salida) {
@@ -36,7 +41,7 @@ public class SalidaServicio implements ISalidaServicio {
             }
         }
 
-        // Validación de stock y cálculo de subtotales/total antes de guardar
+        // Validación de stock por producto contra lotes activos (FIFO) y cálculo de subtotales/total antes de guardar
         double totalCalculado = 0.0;
         if (salida.getDetalles() != null) {
             for (DetalleSalida detalle : salida.getDetalles()) {
@@ -44,13 +49,17 @@ public class SalidaServicio implements ISalidaServicio {
                 if (productoBD == null) {
                     throw new RuntimeException("Producto no encontrado: id=" + detalle.getProducto().getIdProducto());
                 }
-                int stockActual = productoBD.getStock() != null ? productoBD.getStock() : 0;
                 int cantidad = detalle.getCantidad() != null ? detalle.getCantidad() : 0;
                 if (cantidad <= 0) {
                     throw new RuntimeException("Cantidad inválida para el producto id=" + productoBD.getIdProducto());
                 }
-                if (stockActual < cantidad) {
-                    throw new RuntimeException("Stock insuficiente para el producto '" + productoBD.getNombreProducto() + "' (stock=" + stockActual + ", solicitado=" + cantidad + ")");
+                // Validar stock por lotes activos (cantidadDisponible)
+                var lotesActivos = loteRepositorio.findByProductoIdProducto(productoBD.getIdProducto());
+                int disponiblePorLotes = lotesActivos.stream()
+                        .map(l -> l.getCantidadDisponible() == null ? 0 : l.getCantidadDisponible())
+                        .reduce(0, Integer::sum);
+                if (disponiblePorLotes < cantidad) {
+                    throw new RuntimeException("Stock insuficiente por lotes para el producto '" + productoBD.getNombreProducto() + "' (disponible=" + disponiblePorLotes + ", solicitado=" + cantidad + ")");
                 }
 
                 double precioUnitario = detalle.getPrecioUnitario() != null ? detalle.getPrecioUnitario() : 0.0;
@@ -63,14 +72,31 @@ public class SalidaServicio implements ISalidaServicio {
 
         Salida nuevaSalida = salidaRepositorio.save(salida);
 
+        // Descontar por lotes FIFO y actualizar stock global
         if (nuevaSalida.getDetalles() != null) {
             for (DetalleSalida detalle : nuevaSalida.getDetalles()) {
                 Producto productoBD = productoRepositorio.findById(detalle.getProducto().getIdProducto()).orElse(null);
-                if (productoBD != null) {
-                    Integer stockActual = productoBD.getStock() != null ? productoBD.getStock() : 0;
-                    productoBD.setStock(stockActual - detalle.getCantidad());
-                    productoRepositorio.save(productoBD);
+                if (productoBD == null) continue;
+
+                int restante = detalle.getCantidad() == null ? 0 : detalle.getCantidad();
+                var lotesActivos = loteRepositorio.findByProductoIdProducto(productoBD.getIdProducto());
+                for (Lote lote : lotesActivos) {
+                    if (restante <= 0) break;
+                    Integer disp = lote.getCantidadDisponible() == null ? 0 : lote.getCantidadDisponible();
+                    if (disp <= 0) continue;
+                    int aConsumir = Math.min(restante, disp);
+                    lote.setCantidadDisponible(disp - aConsumir);
+                    if (lote.getCantidadDisponible() != null && lote.getCantidadDisponible() <= 0) {
+                        lote.setEstado("Agotado");
+                    }
+                    loteRepositorio.save(lote);
+                    restante -= aConsumir;
                 }
+
+                // Actualizar stock global del producto para mantener consistencia con UI actual
+                Integer stockActual = productoBD.getStock() != null ? productoBD.getStock() : 0;
+                productoBD.setStock(Math.max(0, stockActual - (detalle.getCantidad() == null ? 0 : detalle.getCantidad())));
+                productoRepositorio.save(productoBD);
             }
         }
         return nuevaSalida;

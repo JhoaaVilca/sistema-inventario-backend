@@ -13,7 +13,7 @@ import java.util.List;
 public interface LoteRepositorio extends JpaRepository<Lote, Long> {
 
     // Buscar lotes por producto
-    @Query("SELECT l FROM Lote l WHERE l.detalleEntrada.producto.idProducto = :idProducto AND l.estado = 'Activo' ORDER BY l.fechaVencimiento ASC")
+    @Query("SELECT l FROM Lote l WHERE l.detalleEntrada.producto.idProducto = :idProducto AND l.estado = 'Activo' AND COALESCE(l.cantidadDisponible, 0) > 0 ORDER BY l.fechaVencimiento ASC")
     List<Lote> findByProductoIdProducto(@Param("idProducto") Long idProducto);
 
     // Buscar lotes próximos a vencer (próximos 30 días)
@@ -28,6 +28,6 @@ public interface LoteRepositorio extends JpaRepository<Lote, Long> {
     Lote findByDetalleEntradaIdDetalle(Long idDetalle);
 
     // Obtener stock total de un producto (suma de cantidades de lotes activos)
-    @Query("SELECT COALESCE(SUM(l.detalleEntrada.cantidad), 0) FROM Lote l WHERE l.detalleEntrada.producto.idProducto = :idProducto AND l.estado = 'Activo'")
+    @Query("SELECT COALESCE(SUM(COALESCE(l.cantidadDisponible, 0)), 0) FROM Lote l WHERE l.detalleEntrada.producto.idProducto = :idProducto AND l.estado = 'Activo'")
     Integer getStockTotalPorProducto(@Param("idProducto") Long idProducto);
 }

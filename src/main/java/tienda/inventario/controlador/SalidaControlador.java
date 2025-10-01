@@ -3,6 +3,7 @@ package tienda.inventario.controlador;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import jakarta.validation.Valid;
 import tienda.inventario.dto.SalidaRequestDTO;
 import tienda.inventario.dto.SalidaResponseDTO;
@@ -18,7 +19,6 @@ import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
-import java.util.stream.Collectors;
 import org.springframework.http.ResponseEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +26,7 @@ import org.springframework.http.HttpStatus;
 
 @RestController
 @RequestMapping("/api/salidas")
+@CrossOrigin(origins = "http://localhost:3001")
 public class SalidaControlador {
 
 	@Autowired
