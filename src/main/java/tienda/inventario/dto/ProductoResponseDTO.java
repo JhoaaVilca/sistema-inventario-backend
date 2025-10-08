@@ -16,6 +16,7 @@ public class ProductoResponseDTO {
     private String unidadMedida; // unidad, kg, litro, etc.
     private LocalDate fechaIngreso;
     private Boolean esPerecible = false; // Indica si el producto vence
+    private LocalDate fechaVencimientoInicial; // Fecha de vencimiento del lote inicial
     private String descripcionCorta; // Descripción opcional
     private Long idCategoria;
     private String nombreCategoria; // 👈 listo para mostrar en el front

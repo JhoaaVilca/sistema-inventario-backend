@@ -50,8 +50,6 @@ public class SalidaMapper {
 		
 		// Información del cliente
 		if (salida.getCliente() != null) {
-			dto.setIdCliente(salida.getCliente().getIdCliente());
-			dto.setDniCliente(salida.getCliente().getDni());
 			dto.setNombreCliente(salida.getCliente().getNombres() + " " + 
 				(salida.getCliente().getApellidos() != null ? salida.getCliente().getApellidos() : ""));
 		}
@@ -59,6 +57,7 @@ public class SalidaMapper {
 		dto.setTipoVenta(salida.getTipoVenta());
 		// Exponer fecha de pago de crédito si existe
 		dto.setFechaPagoCredito(salida.getFechaPagoCredito());
+		dto.setEstado(salida.getEstado());
 		
 		dto.setDetalles(salida.getDetalles() == null ? null : salida.getDetalles().stream().map(det -> {
 			DetalleSalidaResponseDTO d = new DetalleSalidaResponseDTO();

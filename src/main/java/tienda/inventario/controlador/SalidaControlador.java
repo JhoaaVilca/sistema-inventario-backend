@@ -83,6 +83,16 @@ public class SalidaControlador {
         return salidaServicio.listarSalidas(pageable).map(SalidaMapper::toResponse);
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<?> obtenerPorId(@PathVariable Long id) {
+        try {
+            var salida = salidaServicio.obtenerPorId(id);
+            return ResponseEntity.ok(SalidaMapper.toResponse(salida));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Error: " + e.getMessage());
+        }
+    }
+
 	@PutMapping("/{id}")
 	public ResponseEntity<?> actualizarSalida(@PathVariable Long id, @Valid @RequestBody SalidaRequestDTO request){
 		try {
@@ -101,20 +111,18 @@ public class SalidaControlador {
 			return ResponseEntity.ok(SalidaMapper.toResponse(salidaActualizada));
 		} catch (Exception e) {
 			logger.error("Error al actualizar salida: ", e);
-			return  ResponseEntity.status(HttpStatus.NOT_FOUND)
-					.body("Error: " + e.getMessage());
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Error: " + e.getMessage());
 		}
 	}
 
-	@DeleteMapping("/{id}")
-	public  ResponseEntity<?> eliminarSalida(@PathVariable Long id){
+	@PutMapping("/{id}/cancelar")
+	public ResponseEntity<?> cancelarSalida(@PathVariable Long id) {
 		try {
-			salidaServicio.eliminarSalida(id);
-			return  ResponseEntity.ok("Salida eliminada Correctamente");
+			var cancelada = salidaServicio.cancelarSalida(id);
+			return ResponseEntity.ok(SalidaMapper.toResponse(cancelada));
 		} catch (Exception e) {
-			logger.error("Error al eliminar salida: ", e);
-			return  ResponseEntity.status(HttpStatus.NOT_FOUND)
-					.body("Error: " + e.getMessage());
+			logger.error("Error al cancelar salida: ", e);
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Error: " + e.getMessage());
 		}
 	}
 
@@ -122,7 +130,6 @@ public class SalidaControlador {
 	public List<SalidaResponseDTO> filtrarPorFecha(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha) {
 		return salidaServicio.filtrarPorFecha(fecha).stream().map(SalidaMapper::toResponse).toList();
 	}
-
 	@GetMapping("/filtrar/rango")
 	public List<SalidaResponseDTO> filtrarPorRango(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
 													 @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin) {

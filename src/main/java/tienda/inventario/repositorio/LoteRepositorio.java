@@ -30,4 +30,8 @@ public interface LoteRepositorio extends JpaRepository<Lote, Long> {
     // Obtener stock total de un producto (suma de cantidades de lotes activos)
     @Query("SELECT COALESCE(SUM(COALESCE(l.cantidadDisponible, 0)), 0) FROM Lote l WHERE l.detalleEntrada.producto.idProducto = :idProducto AND l.estado = 'Activo'")
     Integer getStockTotalPorProducto(@Param("idProducto") Long idProducto);
+
+    // Buscar lotes por producto ordenados por fecha de entrada descendente
+    @Query("SELECT l FROM Lote l WHERE l.detalleEntrada.producto.idProducto = :idProducto ORDER BY l.fechaEntrada DESC")
+    List<Lote> findByDetalleEntradaProductoIdProductoOrderByFechaEntradaDesc(@Param("idProducto") Long idProducto);
 }

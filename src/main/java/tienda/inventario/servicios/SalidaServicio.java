@@ -75,6 +75,10 @@ public class SalidaServicio implements ISalidaServicio {
         }
         salida.setTotalSalida(totalCalculado);
 
+        // Estado por defecto al registrar: Completado
+        if (salida.getEstado() == null || salida.getEstado().isBlank()) {
+            salida.setEstado("Completado");
+        }
         Salida nuevaSalida = salidaRepositorio.save(salida);
 
         // Descontar por lotes FIFO y actualizar stock global
@@ -165,6 +169,35 @@ public class SalidaServicio implements ISalidaServicio {
 
             return salidaRepositorio.save(salidaExistente);
         }).orElseThrow(() -> new RuntimeException("Salida no encontrada"));
+    }
+
+    @Override
+    public Salida obtenerPorId(Long id) {
+        return salidaRepositorio.findById(id).orElseThrow(() -> new RuntimeException("Salida no encontrada"));
+    }
+
+    @Override
+    @Transactional
+    public Salida cancelarSalida(Long id) {
+        Salida salida = salidaRepositorio.findById(id).orElseThrow(() -> new RuntimeException("Salida no encontrada"));
+        if ("Cancelado".equalsIgnoreCase(salida.getEstado())) {
+            return salida; // ya cancelada
+        }
+
+        // Revertir stock global por producto (simétrico a eliminarSalida)
+        if (salida.getDetalles() != null) {
+            for (DetalleSalida detalle : salida.getDetalles()) {
+                Producto producto = productoRepositorio.findById(detalle.getProducto().getIdProducto()).orElse(null);
+                if (producto != null) {
+                    Integer stockActual = producto.getStock() != null ? producto.getStock() : 0;
+                    producto.setStock(stockActual + (detalle.getCantidad() == null ? 0 : detalle.getCantidad()));
+                    productoRepositorio.save(producto);
+                }
+            }
+        }
+
+        salida.setEstado("Cancelado");
+        return salidaRepositorio.save(salida);
     }
 
     @Override

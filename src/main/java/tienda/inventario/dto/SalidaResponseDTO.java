@@ -18,6 +18,8 @@ public class SalidaResponseDTO {
     private String tipoVenta;
     // Para ventas a crédito
     private LocalDate fechaPagoCredito;
+    // Estado de la salida
+    private String estado;
 }
 
 

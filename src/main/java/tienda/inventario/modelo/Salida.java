@@ -36,6 +36,9 @@ public class Salida {
 
     // Para ventas a crédito: fecha comprometida de pago
     private java.time.LocalDate fechaPagoCredito;
+
+    // Estado de la salida: Pendiente | Completado | Cancelado
+    private String estado;
 }
 
 

@@ -12,6 +12,8 @@ public interface ISalidaServicio {
     Page<Salida> listarSalidas(Pageable pageable);
     Salida actualizarSalida(Long id, Salida salida);
     void eliminarSalida(Long id);
+    Salida obtenerPorId(Long id);
+    Salida cancelarSalida(Long id);
 
     List<Salida> filtrarPorFecha(LocalDate fecha);
     List<Salida> filtrarPorRangoFechas(LocalDate fechaInicio, LocalDate fechaFin);

@@ -59,7 +59,22 @@ public class ProductoControlador {
     @GetMapping("/{id}")
     public ResponseEntity<ProductoResponseDTO> obtenerProducto(@PathVariable Long id) {
         return servicio.obtenerProductoPorId(id)
-                .map(ProductoMapper::toResponse)
+                .map(producto -> {
+                    ProductoResponseDTO dto = ProductoMapper.toResponse(producto);
+                    
+                    // Obtener fecha de vencimiento del lote inicial más reciente
+                    try {
+                        List<Lote> lotes = loteRepositorio.findByDetalleEntradaProductoIdProductoOrderByFechaEntradaDesc(id);
+                        if (!lotes.isEmpty()) {
+                            Lote loteInicial = lotes.get(0); // El más reciente
+                            dto.setFechaVencimientoInicial(loteInicial.getFechaVencimiento());
+                        }
+                    } catch (Exception e) {
+                        logger.warn("No se pudo obtener fecha de vencimiento del lote para producto {}: {}", id, e.getMessage());
+                    }
+                    
+                    return dto;
+                })
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
