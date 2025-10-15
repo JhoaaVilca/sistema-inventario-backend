@@ -15,6 +15,9 @@ import tienda.inventario.modelo.Credito;
 import tienda.inventario.modelo.Lote;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import java.math.BigDecimal;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -36,6 +39,9 @@ public class SalidaServicio implements ISalidaServicio {
 
     @Autowired
     private CreditoRepositorio creditoRepositorio;
+
+    @Autowired
+    private KardexServicio kardexServicio;
 
     @Override
     @Transactional
@@ -106,6 +112,15 @@ public class SalidaServicio implements ISalidaServicio {
                 Integer stockActual = productoBD.getStock() != null ? productoBD.getStock() : 0;
                 productoBD.setStock(Math.max(0, stockActual - (detalle.getCantidad() == null ? 0 : detalle.getCantidad())));
                 productoRepositorio.save(productoBD);
+
+                // Registrar movimiento en Kardex (Salida)
+                try {
+                    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                    String username = auth != null ? auth.getName() : "system";
+                    BigDecimal precioUnitario = BigDecimal.valueOf(detalle.getPrecioUnitario() == null ? 0.0 : detalle.getPrecioUnitario());
+                    String referencia = "SALIDA " + nuevaSalida.getIdSalida();
+                    kardexServicio.registrarSalida(productoBD, detalle.getCantidad(), precioUnitario, referencia, username, "");
+                } catch (Exception ignored) { }
             }
         }
         // Si es venta a crédito, crear registro de crédito asociado

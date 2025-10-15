@@ -23,6 +23,9 @@ import java.nio.file.StandardCopyOption;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import java.math.BigDecimal;
 
 @Service
 public class EntradaServicio implements IEntradaServicio {
@@ -38,6 +41,9 @@ public class EntradaServicio implements IEntradaServicio {
 
     @Autowired
     private LoteRepositorio loteRepositorio;
+
+    @Autowired
+    private KardexServicio kardexServicio;
 
     @Override
     public Entrada guardarEntrada(Entrada entrada) {
@@ -55,6 +61,15 @@ public class EntradaServicio implements IEntradaServicio {
                     Integer stockActual = productoBD.getStock() != null ? productoBD.getStock() : 0;
                     productoBD.setStock(stockActual + detalle.getCantidad());
                     productoRepositorio.save(productoBD);
+
+                    // Registrar movimiento en Kardex (Entrada)
+                    try {
+                        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                        String username = auth != null ? auth.getName() : "system";
+                        BigDecimal precioUnitario = BigDecimal.valueOf(detalle.getPrecioUnitario() == null ? 0.0 : detalle.getPrecioUnitario());
+                        String referencia = nuevaEntrada.getNumeroFactura() != null ? ("FACTURA " + nuevaEntrada.getNumeroFactura()) : ("ENTRADA " + nuevaEntrada.getIdEntrada());
+                        kardexServicio.registrarEntrada(productoBD, detalle.getCantidad(), precioUnitario, referencia, username, nuevaEntrada.getObservaciones());
+                    } catch (Exception ignored) { }
                 }
 
                 // Crear lote automáticamente si hay fecha de vencimiento
