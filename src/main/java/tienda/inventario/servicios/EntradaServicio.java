@@ -26,6 +26,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import java.math.BigDecimal;
+import java.util.HashSet;
+import java.util.Set;
 
 @Service
 public class EntradaServicio implements IEntradaServicio {
@@ -50,17 +52,27 @@ public class EntradaServicio implements IEntradaServicio {
         if (entrada.getDetalles() != null) {
             for (DetalleEntrada detalle : entrada.getDetalles()) {
                 detalle.setEntrada(entrada);
+
+                // Validación: productos perecibles requieren fecha de vencimiento en el detalle
+                if (detalle.getProducto() != null && detalle.getProducto().getIdProducto() != null) {
+                    Producto productoVal = productoRepositorio.findById(detalle.getProducto().getIdProducto()).orElse(null);
+                    if (productoVal != null && Boolean.TRUE.equals(productoVal.getEsPerecible())) {
+                        if (detalle.getFechaVencimiento() == null) {
+                            throw new RuntimeException("Para el producto perecible '" + productoVal.getNombreProducto() + "' se requiere fecha de vencimiento en el detalle de entrada.");
+                        }
+                    }
+                }
             }
         }
         Entrada nuevaEntrada = entradaRepositorio.save(entrada);
 
         if (nuevaEntrada.getDetalles() != null) {
+            Set<Long> productosAfectados = new HashSet<>();
             for (DetalleEntrada detalle : nuevaEntrada.getDetalles()) {
                 Producto productoBD = productoRepositorio.findById(detalle.getProducto().getIdProducto()).orElse(null);
                 if (productoBD != null) {
-                    Integer stockActual = productoBD.getStock() != null ? productoBD.getStock() : 0;
-                    productoBD.setStock(stockActual + detalle.getCantidad());
-                    productoRepositorio.save(productoBD);
+                    // Marcar producto afectado; el stock se recalculará al final desde lotes
+                    productosAfectados.add(productoBD.getIdProducto());
 
                     // Registrar movimiento en Kardex (Entrada)
                     try {
@@ -81,6 +93,16 @@ public class EntradaServicio implements IEntradaServicio {
                     lote.setNumeroLote("LOTE-" + detalle.getFechaVencimiento().toString().replace("-", ""));
                     lote.setEstado("Activo");
                     loteRepositorio.save(lote);
+                }
+            }
+
+            // Recalcular stock global por producto desde la suma de lotes activos
+            for (Long idProd : productosAfectados) {
+                Integer stockPorLotes = loteRepositorio.getStockTotalPorProducto(idProd);
+                Producto p = productoRepositorio.findById(idProd).orElse(null);
+                if (p != null) {
+                    p.setStock(stockPorLotes != null ? stockPorLotes : 0);
+                    productoRepositorio.save(p);
                 }
             }
         }

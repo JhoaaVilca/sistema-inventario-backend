@@ -21,6 +21,8 @@ import java.math.BigDecimal;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 @Service
 public class SalidaServicio implements ISalidaServicio {
@@ -89,6 +91,7 @@ public class SalidaServicio implements ISalidaServicio {
 
         // Descontar por lotes FIFO y actualizar stock global
         if (nuevaSalida.getDetalles() != null) {
+            Set<Long> productosAfectados = new HashSet<>();
             for (DetalleSalida detalle : nuevaSalida.getDetalles()) {
                 Producto productoBD = productoRepositorio.findById(detalle.getProducto().getIdProducto()).orElse(null);
                 if (productoBD == null) continue;
@@ -108,10 +111,8 @@ public class SalidaServicio implements ISalidaServicio {
                     restante -= aConsumir;
                 }
 
-                // Actualizar stock global del producto para mantener consistencia con UI actual
-                Integer stockActual = productoBD.getStock() != null ? productoBD.getStock() : 0;
-                productoBD.setStock(Math.max(0, stockActual - (detalle.getCantidad() == null ? 0 : detalle.getCantidad())));
-                productoRepositorio.save(productoBD);
+                // Marcar producto afectado para recálculo desde lotes
+                productosAfectados.add(productoBD.getIdProducto());
 
                 // Registrar movimiento en Kardex (Salida)
                 try {
@@ -121,6 +122,16 @@ public class SalidaServicio implements ISalidaServicio {
                     String referencia = "SALIDA " + nuevaSalida.getIdSalida();
                     kardexServicio.registrarSalida(productoBD, detalle.getCantidad(), precioUnitario, referencia, username, "");
                 } catch (Exception ignored) { }
+            }
+
+            // Recalcular stock global por producto desde la suma de lotes activos
+            for (Long idProd : productosAfectados) {
+                Integer stockPorLotes = loteRepositorio.getStockTotalPorProducto(idProd);
+                Producto p = productoRepositorio.findById(idProd).orElse(null);
+                if (p != null) {
+                    p.setStock(stockPorLotes != null ? stockPorLotes : 0);
+                    productoRepositorio.save(p);
+                }
             }
         }
         // Si es venta a crédito, crear registro de crédito asociado
@@ -199,14 +210,36 @@ public class SalidaServicio implements ISalidaServicio {
             return salida; // ya cancelada
         }
 
-        // Revertir stock global por producto (simétrico a eliminarSalida)
+        // Restaurar cantidades a lotes y luego recalcular stock global
         if (salida.getDetalles() != null) {
+            Set<Long> productosAfectados = new HashSet<>();
             for (DetalleSalida detalle : salida.getDetalles()) {
-                Producto producto = productoRepositorio.findById(detalle.getProducto().getIdProducto()).orElse(null);
-                if (producto != null) {
-                    Integer stockActual = producto.getStock() != null ? producto.getStock() : 0;
-                    producto.setStock(stockActual + (detalle.getCantidad() == null ? 0 : detalle.getCantidad()));
-                    productoRepositorio.save(producto);
+                if (detalle.getProducto() == null || detalle.getProducto().getIdProducto() == null) continue;
+                Long idProducto = detalle.getProducto().getIdProducto();
+                productosAfectados.add(idProducto);
+                int restante = detalle.getCantidad() == null ? 0 : detalle.getCantidad();
+                var lotesProducto = loteRepositorio.findByDetalleEntradaProductoIdProductoOrderByFechaEntradaDesc(idProducto);
+                for (Lote lote : lotesProducto) {
+                    if (restante <= 0) break;
+                    Integer capacidad = (lote.getDetalleEntrada() != null && lote.getDetalleEntrada().getCantidad() != null) ? lote.getDetalleEntrada().getCantidad() : 0;
+                    Integer disponible = lote.getCantidadDisponible() == null ? 0 : lote.getCantidadDisponible();
+                    int espacio = Math.max(0, capacidad - disponible);
+                    if (espacio <= 0) continue;
+                    int aDevolver = Math.min(restante, espacio);
+                    lote.setCantidadDisponible(disponible + aDevolver);
+                    if (lote.getCantidadDisponible() != null && lote.getCantidadDisponible() > 0) {
+                        lote.setEstado("Activo");
+                    }
+                    loteRepositorio.save(lote);
+                    restante -= aDevolver;
+                }
+            }
+            for (Long idProd : productosAfectados) {
+                Integer stockPorLotes = loteRepositorio.getStockTotalPorProducto(idProd);
+                Producto p = productoRepositorio.findById(idProd).orElse(null);
+                if (p != null) {
+                    p.setStock(stockPorLotes != null ? stockPorLotes : 0);
+                    productoRepositorio.save(p);
                 }
             }
         }
@@ -222,12 +255,34 @@ public class SalidaServicio implements ISalidaServicio {
                 .orElseThrow(() -> new RuntimeException("Salida no encontrada"));
 
         if (salida.getDetalles() != null) {
+            Set<Long> productosAfectados = new HashSet<>();
             for (DetalleSalida detalle : salida.getDetalles()) {
-                Producto producto = productoRepositorio.findById(detalle.getProducto().getIdProducto())
-                        .orElse(null);
-                if (producto != null) {
-                    producto.setStock(producto.getStock() + detalle.getCantidad());
-                    productoRepositorio.save(producto);
+                if (detalle.getProducto() == null || detalle.getProducto().getIdProducto() == null) continue;
+                Long idProducto = detalle.getProducto().getIdProducto();
+                productosAfectados.add(idProducto);
+                int restante = detalle.getCantidad() == null ? 0 : detalle.getCantidad();
+                var lotesProducto = loteRepositorio.findByDetalleEntradaProductoIdProductoOrderByFechaEntradaDesc(idProducto);
+                for (Lote lote : lotesProducto) {
+                    if (restante <= 0) break;
+                    Integer capacidad = (lote.getDetalleEntrada() != null && lote.getDetalleEntrada().getCantidad() != null) ? lote.getDetalleEntrada().getCantidad() : 0;
+                    Integer disponible = lote.getCantidadDisponible() == null ? 0 : lote.getCantidadDisponible();
+                    int espacio = Math.max(0, capacidad - disponible);
+                    if (espacio <= 0) continue;
+                    int aDevolver = Math.min(restante, espacio);
+                    lote.setCantidadDisponible(disponible + aDevolver);
+                    if (lote.getCantidadDisponible() != null && lote.getCantidadDisponible() > 0) {
+                        lote.setEstado("Activo");
+                    }
+                    loteRepositorio.save(lote);
+                    restante -= aDevolver;
+                }
+            }
+            for (Long idProd : productosAfectados) {
+                Integer stockPorLotes = loteRepositorio.getStockTotalPorProducto(idProd);
+                Producto p = productoRepositorio.findById(idProd).orElse(null);
+                if (p != null) {
+                    p.setStock(stockPorLotes != null ? stockPorLotes : 0);
+                    productoRepositorio.save(p);
                 }
             }
         }

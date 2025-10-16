@@ -166,7 +166,6 @@ public class ProductoControlador {
                 existente.setNombreProducto(dto.getNombreProducto());
                 existente.setPrecio(dto.getPrecio()); // Precio de venta
                 existente.setPrecioCompra(dto.getPrecioCompra()); // Precio de compra
-                existente.setStock(dto.getStock());
                 existente.setStockMinimo(dto.getStockMinimo());
                 existente.setUnidadMedida(dto.getUnidadMedida());
                 existente.setFechaIngreso(dto.getFechaIngreso());
