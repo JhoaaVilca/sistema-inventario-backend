@@ -42,10 +42,13 @@ public class SecurityConfig {
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                 // Kardex: solo ADMIN (autoridad explícita)
                 .requestMatchers(HttpMethod.GET, "/api/kardex/**").hasAuthority("ROLE_ADMIN")
                 // Empresa: permitir GET y PUT a usuarios autenticados (USER o ADMIN)
                 .requestMatchers("/api/empresa/**").hasAnyRole("ADMIN", "USER")
+                // Ticket PDF 80mm dentro de Salidas
+                .requestMatchers(HttpMethod.GET, "/api/salidas/*/ticket-pdf").hasAnyRole("ADMIN", "USER")
                 // Otras lecturas comunes: permitir GET generales a usuarios autenticados con rol USER o ADMIN
                 .requestMatchers(HttpMethod.GET, "/api/**").hasAnyRole("ADMIN", "USER")
                 // Operaciones sensibles (POST/PUT/DELETE/PATCH) requieren ADMIN

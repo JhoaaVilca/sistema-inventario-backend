@@ -50,68 +50,68 @@ public class SalidaControlador {
 	public ResponseEntity<?> guardar(@Valid @RequestBody SalidaRequestDTO request) {
 		try {
 			logger.info("Recibiendo solicitud de salida: {}", request);
-			
+
 			var ids = request.getDetalles().stream().map(d -> d.getProducto().getIdProducto()).distinct().toList();
 			var productos = productoRepositorio.findAllById(ids);
-			
+
 			// Buscar el cliente
 			Cliente cliente = null;
 			if (request.getCliente() != null && request.getCliente().getIdCliente() != null) {
 				logger.info("Buscando cliente con ID: {}", request.getCliente().getIdCliente());
 				cliente = clienteRepositorio.findById(request.getCliente().getIdCliente())
-					.orElseThrow(() -> new IllegalArgumentException("Cliente no encontrado"));
+						.orElseThrow(() -> new IllegalArgumentException("Cliente no encontrado"));
 				logger.info("Cliente encontrado: {} - {}", cliente.getDni(), cliente.getNombres());
 			} else {
 				logger.warn("No se proporcionó ID de cliente. Request cliente: {}", request.getCliente());
 			}
-			
+
 			logger.info("Productos encontrados: {}", productos.size());
 			logger.info("Detalles de la salida: {}", request.getDetalles().size());
-			
+
 			Salida salida = SalidaMapper.toEntity(request, productos, cliente);
 			logger.info("Salida creada con cliente: {}", salida.getCliente() != null ? salida.getCliente().getDni() : "null");
-			
+
 			Salida creada = salidaServicio.guardarSalida(salida);
-			logger.info("Salida guardada con ID: {} y cliente: {}", creada.getIdSalida(), 
-				creada.getCliente() != null ? creada.getCliente().getDni() : "null");
-			
+			logger.info("Salida guardada con ID: {} y cliente: {}", creada.getIdSalida(),
+					creada.getCliente() != null ? creada.getCliente().getDni() : "null");
+
 			SalidaResponseDTO response = SalidaMapper.toResponse(creada);
 			return ResponseEntity.ok(response);
 		} catch (Exception e) {
 			logger.error("Error al registrar salida: ", e);
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-				.body("Error al registrar salida: " + e.getMessage());
+					.body("Error al registrar salida: " + e.getMessage());
 		}
 	}
 
-    @GetMapping
-    public Page<SalidaResponseDTO> listar(@PageableDefault(size = 20, sort = "idSalida", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
-        return salidaServicio.listarSalidas(pageable).map(SalidaMapper::toResponse);
-    }
+	@GetMapping
+	public Page<SalidaResponseDTO> listar(@PageableDefault(size = 20, sort = "idSalida", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
+		return salidaServicio.listarSalidas(pageable).map(SalidaMapper::toResponse);
+	}
 
-    @GetMapping("/{id}")
-    public ResponseEntity<?> obtenerPorId(@PathVariable Long id) {
-        try {
-            var salida = salidaServicio.obtenerPorId(id);
-            return ResponseEntity.ok(SalidaMapper.toResponse(salida));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Error: " + e.getMessage());
-        }
-    }
+	@GetMapping("/{id}")
+	public ResponseEntity<?> obtenerPorId(@PathVariable Long id) {
+		try {
+			var salida = salidaServicio.obtenerPorId(id);
+			return ResponseEntity.ok(SalidaMapper.toResponse(salida));
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Error: " + e.getMessage());
+		}
+	}
 
 	@PutMapping("/{id}")
 	public ResponseEntity<?> actualizarSalida(@PathVariable Long id, @Valid @RequestBody SalidaRequestDTO request){
 		try {
 			var ids = request.getDetalles().stream().map(d -> d.getProducto().getIdProducto()).distinct().toList();
 			var productos = productoRepositorio.findAllById(ids);
-			
+
 			// Buscar el cliente
 			Cliente cliente = null;
 			if (request.getCliente() != null && request.getCliente().getIdCliente() != null) {
 				cliente = clienteRepositorio.findById(request.getCliente().getIdCliente())
-					.orElseThrow(() -> new IllegalArgumentException("Cliente no encontrado"));
+						.orElseThrow(() -> new IllegalArgumentException("Cliente no encontrado"));
 			}
-			
+
 			Salida salida = SalidaMapper.toEntity(request, productos, cliente);
 			Salida salidaActualizada = salidaServicio.actualizarSalida(id, salida);
 			return ResponseEntity.ok(SalidaMapper.toResponse(salidaActualizada));
@@ -138,7 +138,7 @@ public class SalidaControlador {
 	}
 	@GetMapping("/filtrar/rango")
 	public List<SalidaResponseDTO> filtrarPorRango(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
-													 @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin) {
+												   @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin) {
 		return salidaServicio.filtrarPorRangoFechas(inicio, fin).stream().map(SalidaMapper::toResponse).toList();
 	}
 
@@ -147,20 +147,37 @@ public class SalidaControlador {
 		try {
 			var salida = salidaServicio.obtenerPorId(id);
 			byte[] pdfBytes = pdfServicio.generarBoletaVenta(salida);
-			
+
 			HttpHeaders headers = new HttpHeaders();
 			headers.setContentType(MediaType.APPLICATION_PDF);
 			headers.setContentDispositionFormData("attachment", "boleta_venta_" + id + ".pdf");
 			headers.setCacheControl("must-revalidate, post-check=0, pre-check=0");
-			
+
 			return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
 		} catch (Exception e) {
 			logger.error("Error al generar boleta de venta: ", e);
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
 		}
 	}
-	
+
+	@GetMapping("/{id}/ticket-pdf")
+	public ResponseEntity<byte[]> generarTicketPdf(@PathVariable Long id) {
+		try {
+			var salida = salidaServicio.obtenerPorId(id);
+			byte[] pdfBytes = pdfServicio.generarTicketSalida80mm(salida);
+
+			HttpHeaders headers = new HttpHeaders();
+			headers.setContentType(MediaType.APPLICATION_PDF);
+			headers.set(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=ticket_" + id + ".pdf");
+			headers.setCacheControl("no-cache, no-store, must-revalidate");
+			headers.setPragma("no-cache");
+			headers.setExpires(0);
+
+			return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
+		} catch (Exception e) {
+			logger.error("Error al generar ticket PDF: ", e);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+		}
+	}
 
 }
-
-

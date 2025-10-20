@@ -1,8 +1,10 @@
 package tienda.inventario.servicios;
 
 import com.itextpdf.html2pdf.HtmlConverter;
+import com.itextpdf.html2pdf.ConverterProperties;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
@@ -11,6 +13,8 @@ import com.itextpdf.kernel.font.PdfFont;
 import com.itextpdf.kernel.font.PdfFontFactory;
 import com.itextpdf.io.font.constants.StandardFonts;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import tienda.inventario.dto.KardexResponseDTO;
 import tienda.inventario.modelo.Producto;
@@ -22,12 +26,17 @@ import tienda.inventario.servicios.IEmpresaServicio;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Service
 public class PdfServicio {
+
+    private static final Logger log = LoggerFactory.getLogger(PdfServicio.class);
 
     @Autowired
     private ProductoRepositorio productoRepositorio;
@@ -235,5 +244,157 @@ public class PdfServicio {
 
         document.close();
         return baos.toByteArray();
+    }
+
+    public byte[] generarTicketSalida80mm(Salida salida) throws IOException {
+        Empresa empresa = empresaServicio.obtenerConfiguracion();
+        String nombreEmpresa = empresa != null && empresa.getNombreEmpresa() != null ? empresa.getNombreEmpresa() : "";
+        String ruc = empresa != null && empresa.getRuc() != null ? empresa.getRuc() : "";
+        String direccion = empresa != null && empresa.getDireccion() != null ? empresa.getDireccion() : "";
+        String telefono = empresa != null && empresa.getTelefono() != null ? empresa.getTelefono() : "";
+
+        StringBuilder items = new StringBuilder();
+        if (salida.getDetalles() != null) {
+            for (DetalleSalida d : salida.getDetalles()) {
+                String nombre = d.getProducto() != null ? d.getProducto().getNombreProducto() : "";
+                String cant = String.valueOf(d.getCantidad());
+                String pu = formatMoney(d.getPrecioUnitario());
+                String sub = formatMoney(d.getSubtotal());
+                items.append("<tr>"
+                        + "<td>" + nombre + "</td>"
+                        + "<td class='right'>" + cant + "</td>"
+                        + "<td class='right'>" + pu + "</td>"
+                        + "<td class='right'>" + sub + "</td>"
+                        + "</tr>");
+            }
+        }
+
+        String nombreCliente = "CONSUMIDOR FINAL";
+        String dniCliente = "";
+        if (salida.getCliente() != null) {
+            String nombres = salida.getCliente().getNombres() != null ? salida.getCliente().getNombres() : "";
+            String apellidos = salida.getCliente().getApellidos() != null ? salida.getCliente().getApellidos() : "";
+            nombreCliente = (nombres + " " + apellidos).trim();
+            dniCliente = salida.getCliente().getDni() != null ? salida.getCliente().getDni() : "";
+        }
+
+        String tipoVenta = salida.getTipoVenta() != null ? salida.getTipoVenta() : "CONTADO";
+        String fechaPago = ("CREDITO".equalsIgnoreCase(tipoVenta) && salida.getFechaPagoCredito() != null)
+                ? salida.getFechaPagoCredito().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                : null;
+
+        String fechaSalida;
+        if (salida.getFechaSalida() == null) {
+            fechaSalida = "";
+        } else {
+            try {
+                LocalDate f = salida.getFechaSalida();
+                fechaSalida = f.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            } catch (Exception ex) {
+                fechaSalida = salida.getFechaSalida().toString();
+            }
+        }
+
+        String html = "" +
+                "<html><head><meta charset='UTF-8'/>" +
+                "<style>" +
+                /* margin 0: el ancho lo fija el PageSize (80mm) */
+                "@page { margin: 0; }" +
+                "html, body { margin: 0; padding: 0; }" +
+                "body { font-family: monospace; color: #000; }" +
+                ".center{text-align:center;} .right{text-align:right;} .row{display:flex;justify-content:space-between;}" +
+                ".muted{color:#333;font-size:11px;} .bold{font-weight:700;} .hr{border-top:1px dashed #000;margin:6px 0;}" +
+                "table{width:100%;font-size:11px;border-collapse:collapse; page-break-inside: avoid;} thead, tr, td{ page-break-inside: avoid; } th,td{padding:2px 0;}" +
+                "</style></head><body>" +
+                "<div style='width:100%;padding:3mm;box-sizing:border-box'>" +
+                "<div class='center' style='margin-bottom:4px'>" +
+                "<div class='bold' style='font-size:14px'>" + nombreEmpresa + "</div>" +
+                (ruc.isEmpty() ? "" : ("<div>RUC: " + ruc + "</div>")) +
+                (direccion.isEmpty() ? "" : ("<div class='muted'>" + direccion + "</div>")) +
+                ((telefono.isEmpty()) ? "" : ("<div class='muted'>" + telefono + "</div>")) +
+                "</div>" +
+                "<div class='hr'></div>" +
+                "<div style='font-size:11px'>" +
+                "<div class='row'><span>ID Salida:</span><span class='bold'>#" + salida.getIdSalida() + "</span></div>" +
+                "<div class='row'><span>Fecha:</span><span>" + fechaSalida + "</span></div>" +
+                "<div class='row'><span>Tipo:</span><span class='bold'>" + ("CREDITO".equalsIgnoreCase(tipoVenta) ? "Crédito" : "Contado") + "</span></div>" +
+                (fechaPago != null ? ("<div class='row'><span>Pago (crédito):</span><span>" + fechaPago + "</span></div>") : "") +
+                "</div>" +
+                "<div style='margin-top:6px;font-size:11px'><div class='bold'>Cliente</div>" + nombreCliente +
+                (dniCliente.isEmpty() ? "" : ("<div class='muted'>DNI: " + dniCliente + "</div>")) +
+                "</div>" +
+                "<div class='hr'></div>" +
+                "<table>" +
+                "<thead><tr><th style='text-align:left'>Producto</th><th class='right' style='width:20px'>Cant</th><th class='right' style='width:32px'>P.U.</th><th class='right' style='width:40px'>Subt</th></tr></thead>" +
+                "<tbody>" + items + "</tbody>" +
+                "</table>" +
+                "<div class='hr'></div>" +
+                "<div class='row' style='font-size:12px'><span class='bold'>TOTAL</span><span class='bold'>" + formatMoney(salida.getTotalSalida()) + "</span></div>" +
+                ("CREDITO".equalsIgnoreCase(tipoVenta) ? "<div class='center muted' style='margin-top:8px'>Venta a crédito. Sujeto a pago en la fecha indicada.</div>" : "<div class='center muted' style='margin-top:8px'>Venta al contado.</div>") +
+                "<div class='center' style='margin-top:8px;font-size:11px'>¡Gracias por su compra!</div>" +
+                "</div>" +
+                "</body></html>";
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try {
+            // Página tipo rollo: ancho fijo 80mm y alto dinámico estimado según contenido
+            float widthPt = 80f * 72f / 25.4f;  // 80mm en puntos
+            int numItems = salida.getDetalles() != null ? salida.getDetalles().size() : 0;
+            // Estimación de alto (mm) más generosa para evitar corte en 2 páginas
+            float headerMm = 60f;      // cabecera + datos cliente
+            float perItemMm = 12f;     // alto por fila de item (aprox)
+            float footerMm = 35f;      // totales + nota
+            float heightMm = headerMm + (numItems * perItemMm) + footerMm;
+            // Asegura mínimo 80mm, sin límite superior para no forzar salto
+            heightMm = Math.max(80f, heightMm);
+            float heightPt = heightMm * 72f / 25.4f;
+            PdfWriter writer = new PdfWriter(baos);
+            PdfDocument pdfDoc = new PdfDocument(writer);
+            pdfDoc.setDefaultPageSize(new PageSize(widthPt, heightPt));
+            ConverterProperties props = new ConverterProperties();
+            HtmlConverter.convertToPdf(html, pdfDoc, props);
+            pdfDoc.close();
+            return baos.toByteArray();
+        } catch (Exception ex) {
+            log.error("Error convirtiendo HTML a PDF del ticket 80mm", ex);
+            // Fallback: PDF básico con información esencial
+            baos.reset();
+            PdfWriter writer = new PdfWriter(baos);
+            PdfDocument pdf = new PdfDocument(writer);
+            float widthPt = 80f * 72f / 25.4f;
+            float heightPt = 120f * 72f / 25.4f; // fallback 120mm de alto
+            pdf.setDefaultPageSize(new PageSize(widthPt, heightPt));
+            Document document = new Document(pdf);
+            document.add(new Paragraph(nombreEmpresa).setBold());
+            if (!ruc.isEmpty()) document.add(new Paragraph("RUC: " + ruc));
+            if (!direccion.isEmpty()) document.add(new Paragraph(direccion));
+            if (!telefono.isEmpty()) document.add(new Paragraph(telefono));
+            document.add(new Paragraph(" "));
+            document.add(new Paragraph("ID: #" + salida.getIdSalida()));
+            document.add(new Paragraph("Fecha: " + fechaSalida));
+            document.add(new Paragraph("Tipo: " + ("CREDITO".equalsIgnoreCase(tipoVenta) ? "Crédito" : "Contado")));
+            if (fechaPago != null) document.add(new Paragraph("Pago (crédito): " + fechaPago));
+            document.add(new Paragraph("Cliente: " + nombreCliente));
+            if (!dniCliente.isEmpty()) document.add(new Paragraph("DNI: " + dniCliente));
+            document.add(new Paragraph("Total: " + formatMoney(salida.getTotalSalida())).setBold());
+            document.add(new Paragraph("Gracias por su compra!").setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
+            document.close();
+            return baos.toByteArray();
+        }
+    }
+
+    private String formatMoney(Object value) {
+        try {
+            BigDecimal bd;
+            if (value == null) return "S/ 0.00";
+            if (value instanceof BigDecimal) {
+                bd = (BigDecimal) value;
+            } else {
+                bd = new BigDecimal(String.valueOf(value));
+            }
+            return "S/ " + bd.setScale(2, RoundingMode.HALF_UP).toPlainString();
+        } catch (Exception e) {
+            return "S/ 0.00";
+        }
     }
 }
