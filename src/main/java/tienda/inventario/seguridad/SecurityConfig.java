@@ -44,6 +44,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 // Kardex: solo ADMIN (autoridad explícita)
                 .requestMatchers(HttpMethod.GET, "/api/kardex/**").hasAuthority("ROLE_ADMIN")
+                // Empresa: permitir GET y PUT a usuarios autenticados (USER o ADMIN)
+                .requestMatchers("/api/empresa/**").hasAnyRole("ADMIN", "USER")
                 // Otras lecturas comunes: permitir GET generales a usuarios autenticados con rol USER o ADMIN
                 .requestMatchers(HttpMethod.GET, "/api/**").hasAnyRole("ADMIN", "USER")
                 // Operaciones sensibles (POST/PUT/DELETE/PATCH) requieren ADMIN

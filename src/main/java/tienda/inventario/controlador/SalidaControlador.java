@@ -12,6 +12,7 @@ import tienda.inventario.modelo.Salida;
 import tienda.inventario.repositorio.ProductoRepositorio;
 import tienda.inventario.repositorio.ClienteRepositorio;
 import tienda.inventario.servicios.ISalidaServicio;
+import tienda.inventario.servicios.PdfServicio;
 import tienda.inventario.modelo.Cliente;
 
 import java.time.LocalDate;
@@ -23,6 +24,8 @@ import org.springframework.http.ResponseEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 
 @RestController
 @RequestMapping("/api/salidas")
@@ -37,6 +40,9 @@ public class SalidaControlador {
 
 	@Autowired
 	private ClienteRepositorio clienteRepositorio;
+
+	@Autowired
+	private PdfServicio pdfServicio;
 
 	private static final Logger logger = LoggerFactory.getLogger(SalidaControlador.class);
 
@@ -134,6 +140,24 @@ public class SalidaControlador {
 	public List<SalidaResponseDTO> filtrarPorRango(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
 													 @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin) {
 		return salidaServicio.filtrarPorRangoFechas(inicio, fin).stream().map(SalidaMapper::toResponse).toList();
+	}
+
+	@GetMapping("/{id}/boleta")
+	public ResponseEntity<byte[]> generarBoleta(@PathVariable Long id) {
+		try {
+			var salida = salidaServicio.obtenerPorId(id);
+			byte[] pdfBytes = pdfServicio.generarBoletaVenta(salida);
+			
+			HttpHeaders headers = new HttpHeaders();
+			headers.setContentType(MediaType.APPLICATION_PDF);
+			headers.setContentDispositionFormData("attachment", "boleta_venta_" + id + ".pdf");
+			headers.setCacheControl("must-revalidate, post-check=0, pre-check=0");
+			
+			return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
+		} catch (Exception e) {
+			logger.error("Error al generar boleta de venta: ", e);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+		}
 	}
 	
 

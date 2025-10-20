@@ -14,20 +14,26 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import tienda.inventario.dto.KardexResponseDTO;
 import tienda.inventario.modelo.Producto;
+import tienda.inventario.modelo.Salida;
+import tienda.inventario.modelo.DetalleSalida;
+import tienda.inventario.modelo.Empresa;
 import tienda.inventario.repositorio.ProductoRepositorio;
+import tienda.inventario.servicios.IEmpresaServicio;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.math.BigDecimal;
 
 @Service
 public class PdfServicio {
 
     @Autowired
     private ProductoRepositorio productoRepositorio;
+
+    @Autowired
+    private IEmpresaServicio empresaServicio;
 
     public byte[] generarKardexPdf(List<KardexResponseDTO> movimientos, Long idProducto, LocalDateTime fechaInicio, LocalDateTime fechaFin) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -38,10 +44,13 @@ public class PdfServicio {
         PdfFont font = PdfFontFactory.createFont(StandardFonts.HELVETICA);
         PdfFont boldFont = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
 
+        // Obtener datos de la empresa
+        Empresa empresa = empresaServicio.obtenerConfiguracion();
+
         // Título
         document.add(new Paragraph("Reporte Kardex de Inventario")
                 .setFont(boldFont).setFontSize(18).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
-        document.add(new Paragraph("Comercial Yoli")
+        document.add(new Paragraph(empresa.getNombreEmpresa())
                 .setFont(font).setFontSize(12).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
         document.add(new Paragraph("Fecha de Generación: " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")))
                 .setFont(font).setFontSize(10).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.RIGHT));
@@ -110,6 +119,121 @@ public class PdfServicio {
     public byte[] generarPdfDesdeHtml(String htmlContent) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         HtmlConverter.convertToPdf(htmlContent, baos);
+        return baos.toByteArray();
+    }
+
+    public byte[] generarBoletaVenta(Salida salida) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        PdfWriter writer = new PdfWriter(baos);
+        PdfDocument pdf = new PdfDocument(writer);
+        Document document = new Document(pdf);
+
+        PdfFont font = PdfFontFactory.createFont(StandardFonts.HELVETICA);
+        PdfFont boldFont = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
+
+        // Obtener datos de la empresa
+        Empresa empresa = empresaServicio.obtenerConfiguracion();
+
+        // Encabezado de la boleta
+        document.add(new Paragraph("BOLETA DE VENTA")
+                .setFont(boldFont).setFontSize(20).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
+        document.add(new Paragraph(empresa.getNombreEmpresa())
+                .setFont(boldFont).setFontSize(14).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
+        
+        if (empresa.getRuc() != null && !empresa.getRuc().trim().isEmpty()) {
+            document.add(new Paragraph("RUC: " + empresa.getRuc())
+                    .setFont(font).setFontSize(10).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
+        }
+        
+        if (empresa.getDireccion() != null && !empresa.getDireccion().trim().isEmpty()) {
+            document.add(new Paragraph(empresa.getDireccion())
+                    .setFont(font).setFontSize(10).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
+        }
+        
+        if (empresa.getTelefono() != null && !empresa.getTelefono().trim().isEmpty()) {
+            document.add(new Paragraph("Tel: " + empresa.getTelefono())
+                    .setFont(font).setFontSize(10).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
+        }
+        
+        document.add(new Paragraph("\n"));
+
+        // Información de la venta
+        document.add(new Paragraph("BOLETA N°: " + salida.getIdSalida())
+                .setFont(boldFont).setFontSize(12));
+        document.add(new Paragraph("FECHA: " + salida.getFechaSalida().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
+                .setFont(font).setFontSize(10));
+        document.add(new Paragraph("TIPO DE VENTA: " + (salida.getTipoVenta() != null ? salida.getTipoVenta() : "CONTADO"))
+                .setFont(font).setFontSize(10));
+
+        // Información del cliente
+        if (salida.getCliente() != null) {
+            document.add(new Paragraph("CLIENTE: " + salida.getCliente().getNombres() + " " + salida.getCliente().getApellidos())
+                    .setFont(font).setFontSize(10));
+            document.add(new Paragraph("DNI: " + salida.getCliente().getDni())
+                    .setFont(font).setFontSize(10));
+        } else {
+            document.add(new Paragraph("CLIENTE: CONSUMIDOR FINAL")
+                    .setFont(font).setFontSize(10));
+        }
+
+        // Para ventas a crédito, mostrar fecha de pago
+        if ("CREDITO".equals(salida.getTipoVenta()) && salida.getFechaPagoCredito() != null) {
+            document.add(new Paragraph("FECHA DE PAGO: " + salida.getFechaPagoCredito().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
+                    .setFont(font).setFontSize(10));
+        }
+
+        document.add(new Paragraph("\n"));
+
+        // Tabla de productos
+        float[] columnWidths = {3, 1, 1, 2}; // Producto, Cantidad, Precio, Subtotal
+        Table table = new Table(columnWidths);
+        table.setWidth(com.itextpdf.layout.properties.UnitValue.createPercentValue(100));
+
+        // Encabezados de la tabla
+        table.addHeaderCell(new Cell().add(new Paragraph("PRODUCTO").setFont(boldFont).setFontSize(9))
+                .setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
+        table.addHeaderCell(new Cell().add(new Paragraph("CANT.").setFont(boldFont).setFontSize(9))
+                .setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
+        table.addHeaderCell(new Cell().add(new Paragraph("P.UNIT.").setFont(boldFont).setFontSize(9))
+                .setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
+        table.addHeaderCell(new Cell().add(new Paragraph("SUBTOTAL").setFont(boldFont).setFontSize(9))
+                .setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
+
+        // Filas de productos
+        for (DetalleSalida detalle : salida.getDetalles()) {
+            table.addCell(new Cell().add(new Paragraph(detalle.getProducto().getNombreProducto())
+                    .setFont(font).setFontSize(8))
+                    .setTextAlignment(com.itextpdf.layout.properties.TextAlignment.LEFT));
+            table.addCell(new Cell().add(new Paragraph(String.valueOf(detalle.getCantidad()))
+                    .setFont(font).setFontSize(8))
+                    .setTextAlignment(com.itextpdf.layout.properties.TextAlignment.RIGHT));
+            table.addCell(new Cell().add(new Paragraph(String.format("%.2f", detalle.getPrecioUnitario()))
+                    .setFont(font).setFontSize(8))
+                    .setTextAlignment(com.itextpdf.layout.properties.TextAlignment.RIGHT));
+            table.addCell(new Cell().add(new Paragraph(String.format("%.2f", detalle.getSubtotal()))
+                    .setFont(font).setFontSize(8))
+                    .setTextAlignment(com.itextpdf.layout.properties.TextAlignment.RIGHT));
+        }
+
+        document.add(table);
+        document.add(new Paragraph("\n"));
+
+        // Total
+        document.add(new Paragraph("TOTAL: S/ " + String.format("%.2f", salida.getTotalSalida()))
+                .setFont(boldFont).setFontSize(14)
+                .setTextAlignment(com.itextpdf.layout.properties.TextAlignment.RIGHT));
+
+        document.add(new Paragraph("\n"));
+
+        // Pie de página
+        document.add(new Paragraph("¡Gracias por su compra!")
+                .setFont(font).setFontSize(10)
+                .setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
+        document.add(new Paragraph("Vuelva pronto")
+                .setFont(font).setFontSize(10)
+                .setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
+
+        document.close();
         return baos.toByteArray();
     }
 }

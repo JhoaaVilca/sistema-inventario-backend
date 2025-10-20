@@ -84,8 +84,6 @@ public class KardexServicio {
         kardex.setCostoPromedioActual(costoPromedioActual);
 
         // Actualizar el stock del producto
-        producto.setStock(stockActual);
-        productoRepositorio.save(producto);
 
         return kardexRepositorio.save(kardex);
     }

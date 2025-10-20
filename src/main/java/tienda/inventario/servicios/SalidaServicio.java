@@ -124,12 +124,13 @@ public class SalidaServicio implements ISalidaServicio {
                 } catch (Exception ignored) { }
             }
 
-            // Recalcular stock global por producto desde la suma de lotes activos
+            // Recalcular stock global por producto desde la suma de lotes activos (forzar no negativo)
             for (Long idProd : productosAfectados) {
                 Integer stockPorLotes = loteRepositorio.getStockTotalPorProducto(idProd);
+                int stockSeguro = Math.max(0, stockPorLotes != null ? stockPorLotes : 0);
                 Producto p = productoRepositorio.findById(idProd).orElse(null);
                 if (p != null) {
-                    p.setStock(stockPorLotes != null ? stockPorLotes : 0);
+                    p.setStock(stockSeguro);
                     productoRepositorio.save(p);
                 }
             }
