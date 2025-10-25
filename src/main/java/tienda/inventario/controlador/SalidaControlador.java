@@ -13,10 +13,13 @@ import tienda.inventario.repositorio.ProductoRepositorio;
 import tienda.inventario.repositorio.ClienteRepositorio;
 import tienda.inventario.servicios.ISalidaServicio;
 import tienda.inventario.servicios.PdfServicio;
+import tienda.inventario.servicios.ICajaDiariaServicio;
 import tienda.inventario.modelo.Cliente;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -43,6 +46,9 @@ public class SalidaControlador {
 
 	@Autowired
 	private PdfServicio pdfServicio;
+
+	@Autowired
+	private ICajaDiariaServicio cajaServicio;
 
 	private static final Logger logger = LoggerFactory.getLogger(SalidaControlador.class);
 
@@ -74,6 +80,31 @@ public class SalidaControlador {
 			Salida creada = salidaServicio.guardarSalida(salida);
 			logger.info("Salida guardada con ID: {} y cliente: {}", creada.getIdSalida(),
 					creada.getCliente() != null ? creada.getCliente().getDni() : "null");
+
+			// Integración con Caja del Día - Registrar ingreso si es venta al contado
+			try {
+				if (creada.getTipoVenta() != null && "CONTADO".equals(creada.getTipoVenta())) {
+					// Verificar si hay caja abierta
+					if (cajaServicio.existeCajaAbierta()) {
+						var cajaAbierta = cajaServicio.obtenerCajaAbierta();
+						if (cajaAbierta.isPresent()) {
+							cajaServicio.registrarIngresoVenta(
+								cajaAbierta.get().getIdCaja(),
+								BigDecimal.valueOf(creada.getTotalSalida()),
+								"Venta al contado - " + creada.getIdSalida(),
+								"admin", // TODO: Obtener usuario actual
+								creada.getIdSalida()
+							);
+							logger.info("Ingreso registrado en caja por venta al contado: {}", creada.getTotalSalida());
+						}
+					} else {
+						logger.warn("No hay caja abierta para registrar el ingreso de la venta");
+					}
+				}
+			} catch (Exception e) {
+				logger.error("Error al registrar ingreso en caja: ", e);
+				// No fallar la venta si hay error con la caja
+			}
 
 			SalidaResponseDTO response = SalidaMapper.toResponse(creada);
 			return ResponseEntity.ok(response);
@@ -177,6 +208,45 @@ public class SalidaControlador {
 		} catch (Exception e) {
 			logger.error("Error al generar ticket PDF: ", e);
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+		}
+	}
+
+	/**
+	 * Obtener estado de caja para el módulo de Salidas
+	 */
+	@GetMapping("/caja/estado")
+	public ResponseEntity<?> obtenerEstadoCaja() {
+		try {
+			boolean existeCaja = cajaServicio.existeCajaAbierta();
+			
+			if (existeCaja) {
+				var cajaAbierta = cajaServicio.obtenerCajaAbierta();
+				if (cajaAbierta.isPresent()) {
+					var caja = cajaAbierta.get();
+					return ResponseEntity.ok(Map.of(
+						"existeCaja", true,
+						"caja", Map.of(
+							"id", caja.getIdCaja(),
+							"fecha", caja.getFecha(),
+							"montoApertura", caja.getMontoApertura(),
+							"totalIngresos", caja.getTotalIngresos(),
+							"totalEgresos", caja.getTotalEgresos(),
+							"saldoActual", caja.getSaldoActual(),
+							"fechaApertura", caja.getFechaApertura(),
+							"usuarioApertura", caja.getUsuarioApertura()
+						)
+					));
+				}
+			}
+			
+			return ResponseEntity.ok(Map.of(
+				"existeCaja", false,
+				"message", "No hay caja abierta"
+			));
+		} catch (Exception e) {
+			logger.error("Error al obtener estado de caja: ", e);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+				.body(Map.of("success", false, "message", e.getMessage()));
 		}
 	}
 

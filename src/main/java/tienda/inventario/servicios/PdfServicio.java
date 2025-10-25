@@ -397,4 +397,143 @@ public class PdfServicio {
             return "S/ 0.00";
         }
     }
+
+    /**
+     * Generar reporte PDF de caja diaria
+     */
+    public byte[] generarReporteCaja(tienda.inventario.modelo.CajaDiaria caja, java.util.List<tienda.inventario.modelo.MovimientoCaja> movimientos) {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            PdfWriter writer = new PdfWriter(baos);
+            PdfDocument pdf = new PdfDocument(writer);
+            Document document = new Document(pdf, PageSize.A4);
+
+            // Obtener datos de empresa
+            Empresa empresa = empresaServicio.obtenerConfiguracion();
+
+            // Fuentes
+            PdfFont fontBold = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
+            PdfFont fontNormal = PdfFontFactory.createFont(StandardFonts.HELVETICA);
+
+            // Título
+            Paragraph titulo = new Paragraph("REPORTE DE CAJA DIARIA")
+                    .setFont(fontBold)
+                    .setFontSize(18)
+                    .setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER)
+                    .setMarginBottom(20);
+            document.add(titulo);
+
+            // Información de empresa
+            Paragraph empresaInfo = new Paragraph(empresa.getNombreEmpresa())
+                    .setFont(fontBold)
+                    .setFontSize(14)
+                    .setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER)
+                    .setMarginBottom(5);
+            document.add(empresaInfo);
+
+            if (empresa.getDireccion() != null && !empresa.getDireccion().isEmpty()) {
+                Paragraph direccion = new Paragraph(empresa.getDireccion())
+                        .setFont(fontNormal)
+                        .setFontSize(10)
+                        .setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER)
+                        .setMarginBottom(20);
+                document.add(direccion);
+            }
+
+            // Información de la caja
+            Table infoTable = new Table(2).useAllAvailableWidth();
+            infoTable.addCell(createCell("Fecha:", fontBold, true));
+            infoTable.addCell(createCell(caja.getFecha().toString(), fontNormal, false));
+            infoTable.addCell(createCell("Estado:", fontBold, true));
+            infoTable.addCell(createCell(caja.getEstado().toString(), fontNormal, false));
+            infoTable.addCell(createCell("Monto Apertura:", fontBold, true));
+            infoTable.addCell(createCell(formatMoney(caja.getMontoApertura()), fontNormal, false));
+            infoTable.addCell(createCell("Total Ingresos:", fontBold, true));
+            infoTable.addCell(createCell(formatMoney(caja.getTotalIngresos()), fontNormal, false));
+            infoTable.addCell(createCell("Total Egresos:", fontBold, true));
+            infoTable.addCell(createCell(formatMoney(caja.getTotalEgresos()), fontNormal, false));
+            infoTable.addCell(createCell("Saldo Actual:", fontBold, true));
+            infoTable.addCell(createCell(formatMoney(caja.getSaldoActual()), fontNormal, false));
+            
+            if (caja.getFechaApertura() != null) {
+                infoTable.addCell(createCell("Hora Apertura:", fontBold, true));
+                infoTable.addCell(createCell(caja.getFechaApertura().toString(), fontNormal, false));
+            }
+            
+            if (caja.getFechaCierre() != null) {
+                infoTable.addCell(createCell("Hora Cierre:", fontBold, true));
+                infoTable.addCell(createCell(caja.getFechaCierre().toString(), fontNormal, false));
+            }
+
+            document.add(infoTable);
+            document.add(new Paragraph("\n"));
+
+            // Tabla de movimientos
+            if (movimientos != null && !movimientos.isEmpty()) {
+                Paragraph movimientosTitulo = new Paragraph("MOVIMIENTOS DE CAJA")
+                        .setFont(fontBold)
+                        .setFontSize(14)
+                        .setMarginBottom(10);
+                document.add(movimientosTitulo);
+
+                Table movimientosTable = new Table(5).useAllAvailableWidth();
+                
+                // Encabezados
+                movimientosTable.addCell(createCell("Hora", fontBold, true));
+                movimientosTable.addCell(createCell("Tipo", fontBold, true));
+                movimientosTable.addCell(createCell("Descripción", fontBold, true));
+                movimientosTable.addCell(createCell("Monto", fontBold, true));
+                movimientosTable.addCell(createCell("Usuario", fontBold, true));
+
+                // Datos
+                for (tienda.inventario.modelo.MovimientoCaja movimiento : movimientos) {
+                    movimientosTable.addCell(createCell(movimiento.getFechaMovimiento().toString(), fontNormal, false));
+                    movimientosTable.addCell(createCell(movimiento.getTipoMovimiento().toString(), fontNormal, false));
+                    movimientosTable.addCell(createCell(movimiento.getDescripcion() != null ? movimiento.getDescripcion() : "", fontNormal, false));
+                    movimientosTable.addCell(createCell(formatMoney(movimiento.getMonto()), fontNormal, false));
+                    movimientosTable.addCell(createCell(movimiento.getUsuarioRegistro() != null ? movimiento.getUsuarioRegistro() : "", fontNormal, false));
+                }
+
+                document.add(movimientosTable);
+            }
+
+            // Resumen final
+            document.add(new Paragraph("\n"));
+            Paragraph resumen = new Paragraph("RESUMEN FINAL")
+                    .setFont(fontBold)
+                    .setFontSize(12)
+                    .setMarginBottom(10);
+            document.add(resumen);
+
+            Table resumenTable = new Table(2).useAllAvailableWidth();
+            resumenTable.addCell(createCell("Total de Movimientos:", fontBold, true));
+            resumenTable.addCell(createCell(String.valueOf(movimientos != null ? movimientos.size() : 0), fontNormal, false));
+            resumenTable.addCell(createCell("Saldo Final:", fontBold, true));
+            resumenTable.addCell(createCell(formatMoney(caja.getSaldoActual()), fontBold, false));
+
+            document.add(resumenTable);
+
+            // Pie de página
+            document.add(new Paragraph("\n"));
+            Paragraph pie = new Paragraph("Reporte generado el " + java.time.LocalDateTime.now().toString())
+                    .setFont(fontNormal)
+                    .setFontSize(8)
+                    .setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER);
+            document.add(pie);
+
+            document.close();
+            return baos.toByteArray();
+
+        } catch (Exception e) {
+            log.error("Error al generar reporte de caja: ", e);
+            throw new RuntimeException("Error al generar reporte de caja", e);
+        }
+    }
+
+    private Cell createCell(String text, PdfFont font, boolean isHeader) {
+        Cell cell = new Cell().add(new Paragraph(text).setFont(font));
+        if (isHeader) {
+            cell.setBackgroundColor(com.itextpdf.kernel.colors.ColorConstants.LIGHT_GRAY);
+        }
+        return cell;
+    }
 }

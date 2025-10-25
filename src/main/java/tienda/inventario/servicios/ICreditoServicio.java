@@ -9,7 +9,7 @@ public interface ICreditoServicio {
     Credito crearCredito(Credito credito);
     Page<Credito> listarCreditos(Pageable pageable);
     Credito obtenerPorId(Long id);
-    PagoCredito registrarPago(Long idCredito, PagoCredito pago);
+    PagoCredito registrarPago(Long idCredito, PagoCredito pago, Long idCaja, String usuario);
 }
 
 
