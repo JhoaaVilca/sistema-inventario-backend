@@ -82,3 +82,4 @@ public interface MovimientoCajaRepositorio extends JpaRepository<MovimientoCaja,
     Long countByCajaDiaria(@Param("caja") CajaDiaria caja);
 }
 
+

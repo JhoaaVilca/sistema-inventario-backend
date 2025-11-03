@@ -18,7 +18,7 @@ public class EmpresaServicio implements IEmpresaServicio {
         
         // Si no existe configuración, crear una por defecto
         if (empresa == null) {
-            empresa = new Empresa("Comercial Yoli", "12345678901", "Av. Principal 123, Lima");
+            empresa = new Empresa("COMERCIAL YAMISA", "12345678901", "Av. Principal 123, Lima");
             empresa = empresaRepositorio.save(empresa);
         }
         

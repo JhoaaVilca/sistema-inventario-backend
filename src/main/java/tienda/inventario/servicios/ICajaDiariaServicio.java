@@ -109,3 +109,4 @@ public interface ICajaDiariaServicio {
     byte[] generarReporteCaja(Long idCaja);
 }
 
+
