@@ -251,6 +251,16 @@ public class ProductoControlador {
         return ResponseEntity.ok(resumen);
     }
 
+    // ✅ GET: Productos SIN STOCK (stock == 0)
+    @GetMapping("/alertas/sin-stock")
+    public List<ProductoResponseDTO> obtenerProductosSinStock() {
+        return servicio.listarProductos(org.springframework.data.domain.Pageable.unpaged())
+                .stream()
+                .filter(p -> p.getStock() != null && p.getStock() == 0)
+                .map(ProductoMapper::toResponse)
+                .toList();
+    }
+
     // ✅ GET: Buscar productos por nombre (para autocompletado)
     @GetMapping("/buscar")
     public List<ProductoResponseDTO> buscarProductos(@RequestParam String q) {

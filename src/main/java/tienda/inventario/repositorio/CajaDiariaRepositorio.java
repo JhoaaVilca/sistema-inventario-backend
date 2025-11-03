@@ -63,3 +63,5 @@ public interface CajaDiariaRepositorio extends JpaRepository<CajaDiaria, Long> {
     List<CajaDiaria> findByMesAndAño(@Param("mes") int mes, @Param("año") int año);
 }
 
+
+

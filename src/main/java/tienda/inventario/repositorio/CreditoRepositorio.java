@@ -7,6 +7,8 @@ import tienda.inventario.modelo.Credito;
 @Repository
 public interface CreditoRepositorio extends JpaRepository<Credito, Long> {
     Credito findBySalidaIdSalida(Long idSalida);
+    long countBySaldoPendienteGreaterThan(Double monto);
+    long countByEstado(String estado);
 }
 
 
