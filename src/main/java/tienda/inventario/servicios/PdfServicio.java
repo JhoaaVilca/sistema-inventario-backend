@@ -22,7 +22,7 @@ import tienda.inventario.modelo.Salida;
 import tienda.inventario.modelo.DetalleSalida;
 import tienda.inventario.modelo.Empresa;
 import tienda.inventario.repositorio.ProductoRepositorio;
-import tienda.inventario.servicios.IEmpresaServicio;
+
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
