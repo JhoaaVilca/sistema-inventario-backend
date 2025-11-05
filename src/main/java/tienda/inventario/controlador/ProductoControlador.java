@@ -9,6 +9,8 @@ import org.springframework.data.web.PageableDefault;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import tienda.inventario.dto.ProductoRequestDTO;
 import tienda.inventario.dto.ProductoResponseDTO;
 import tienda.inventario.mapper.ProductoMapper;
@@ -18,9 +20,11 @@ import tienda.inventario.modelo.DetalleEntrada;
 import tienda.inventario.modelo.Lote;
 import tienda.inventario.repositorio.CategoriaRepositorio;
 import tienda.inventario.servicios.IProductoServicio;
+import tienda.inventario.servicios.KardexServicio;
 import tienda.inventario.repositorio.DetalleEntradaRepositorio;
 import tienda.inventario.repositorio.LoteRepositorio;
 
+import java.math.BigDecimal;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
@@ -36,16 +40,19 @@ public class ProductoControlador {
     private final CategoriaRepositorio categoriaRepositorio;
     private final DetalleEntradaRepositorio detalleEntradaRepositorio;
     private final LoteRepositorio loteRepositorio;
+    private final KardexServicio kardexServicio;
 
     private static final Logger logger = LoggerFactory.getLogger(ProductoControlador.class);
 
     public ProductoControlador(IProductoServicio servicio, CategoriaRepositorio categoriaRepositorio,
                                DetalleEntradaRepositorio detalleEntradaRepositorio,
-                               LoteRepositorio loteRepositorio) {
+                               LoteRepositorio loteRepositorio,
+                               KardexServicio kardexServicio) {
         this.servicio = servicio;
         this.categoriaRepositorio = categoriaRepositorio;
         this.detalleEntradaRepositorio = detalleEntradaRepositorio;
         this.loteRepositorio = loteRepositorio;
+        this.kardexServicio = kardexServicio;
     }
 
     // ✅ GET: Listar productos paginados
@@ -137,6 +144,39 @@ public class ProductoControlador {
                 }
             } catch (Exception e) {
                 logger.warn("No se pudo crear lote inicial para el producto: {}", e.getMessage());
+            }
+
+            // Registrar AJUSTE INICIAL en Kardex cuando hay stock inicial
+            try {
+                if (dto.getStock() != null && dto.getStock() > 0) {
+                    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                    String username = auth != null ? auth.getName() : "system";
+                    BigDecimal precioUnitario = BigDecimal.valueOf(dto.getPrecioCompra() == null ? 0.0 : dto.getPrecioCompra());
+                    String referencia = "AJUSTE INICIAL";
+                    String observaciones = "Stock inicial desde módulo de productos";
+                    kardexServicio.registrarAjuste(guardado, dto.getStock(), precioUnitario, referencia, username, observaciones);
+                }
+            } catch (Exception e) {
+                logger.warn("No se pudo registrar AJUSTE INICIAL en Kardex para el producto {}: {}", guardado.getIdProducto(), e.getMessage());
+            }
+
+            // Sincronización automática: si hay desajuste entre stock del producto y suma de lotes, crear ajuste en Kardex
+            try {
+                Integer stockPorLotes = loteRepositorio.getStockTotalPorProducto(guardado.getIdProducto());
+                int stockProducto = guardado.getStock() == null ? 0 : guardado.getStock();
+                int stockLotes = stockPorLotes == null ? 0 : stockPorLotes;
+                int delta = stockLotes - stockProducto; // cantidad necesaria para alinear al valor de lotes
+                if (delta != 0) {
+                    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                    String username = auth != null ? auth.getName() : "system";
+                    // Para ajustes negativos, usar costo promedio previo (si el servicio lo calcula). Aquí usamos precio de compra como referencia.
+                    BigDecimal precioUnitarioAjuste = BigDecimal.valueOf(dto.getPrecioCompra() == null ? 0.0 : dto.getPrecioCompra());
+                    String referencia = "AJUSTE SINCRONIZACIÓN LOTES";
+                    String observaciones = "Ajuste automático para alinear stock con lotes";
+                    kardexServicio.registrarAjuste(guardado, delta, precioUnitarioAjuste, referencia, username, observaciones);
+                }
+            } catch (Exception e) {
+                logger.warn("No se pudo sincronizar stock con lotes para el producto {}: {}", guardado.getIdProducto(), e.getMessage());
             }
 
             ProductoResponseDTO resp = ProductoMapper.toResponse(guardado);
