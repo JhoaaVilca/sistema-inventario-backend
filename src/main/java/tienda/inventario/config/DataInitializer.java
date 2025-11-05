@@ -14,7 +14,7 @@ public class DataInitializer {
     @Bean
     CommandLineRunner initAdmin(UsuarioRepositorio repo, PasswordEncoder encoder) {
         return args -> {
-            String username = "tiendayoli";
+            String username = "tiendayamisa";
             if (!repo.existsByUsername(username)) {
                 Usuario admin = new Usuario();
                 admin.setUsername(username);
