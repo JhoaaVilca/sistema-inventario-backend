@@ -119,7 +119,7 @@ public class SalidaServicio implements ISalidaServicio {
                     Authentication auth = SecurityContextHolder.getContext().getAuthentication();
                     String username = auth != null ? auth.getName() : "system";
                     BigDecimal precioUnitario = BigDecimal.valueOf(detalle.getPrecioUnitario() == null ? 0.0 : detalle.getPrecioUnitario());
-                    String referencia = "SALIDA " + nuevaSalida.getIdSalida();
+                    String referencia = "Venta #" + nuevaSalida.getIdSalida();
                     kardexServicio.registrarSalida(productoBD, detalle.getCantidad(), precioUnitario, referencia, username, "");
                 } catch (Exception ignored) { }
             }

@@ -79,7 +79,9 @@ public class EntradaServicio implements IEntradaServicio {
                         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
                         String username = auth != null ? auth.getName() : "system";
                         BigDecimal precioUnitario = BigDecimal.valueOf(detalle.getPrecioUnitario() == null ? 0.0 : detalle.getPrecioUnitario());
-                        String referencia = nuevaEntrada.getNumeroFactura() != null ? ("FACTURA " + nuevaEntrada.getNumeroFactura()) : ("ENTRADA " + nuevaEntrada.getIdEntrada());
+                        String referencia = nuevaEntrada.getNumeroFactura() != null 
+                            ? ("Compra #" + nuevaEntrada.getIdEntrada() + " - Factura " + nuevaEntrada.getNumeroFactura()) 
+                            : ("Compra #" + nuevaEntrada.getIdEntrada());
                         kardexServicio.registrarEntrada(productoBD, detalle.getCantidad(), precioUnitario, referencia, username, nuevaEntrada.getObservaciones());
                     } catch (Exception ignored) { }
                 }

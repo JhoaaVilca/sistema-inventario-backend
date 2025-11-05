@@ -48,7 +48,7 @@ public class PdfServicio {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         PdfWriter writer = new PdfWriter(baos);
         PdfDocument pdf = new PdfDocument(writer);
-        Document document = new Document(pdf);
+        Document document = new Document(pdf, PageSize.A4);
 
         PdfFont font = PdfFontFactory.createFont(StandardFonts.HELVETICA);
         PdfFont boldFont = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
@@ -60,7 +60,15 @@ public class PdfServicio {
         document.add(new Paragraph("Reporte Kardex de Inventario")
                 .setFont(boldFont).setFontSize(18).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
         document.add(new Paragraph(empresa.getNombreEmpresa())
-                .setFont(font).setFontSize(12).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
+                .setFont(boldFont).setFontSize(12).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
+        if (empresa.getRuc() != null && !empresa.getRuc().trim().isEmpty()) {
+            document.add(new Paragraph("RUC: " + empresa.getRuc())
+                    .setFont(font).setFontSize(10).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
+        }
+        if (empresa.getDireccion() != null && !empresa.getDireccion().trim().isEmpty()) {
+            document.add(new Paragraph(empresa.getDireccion())
+                    .setFont(font).setFontSize(10).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
+        }
         document.add(new Paragraph("Fecha de Generación: " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")))
                 .setFont(font).setFontSize(10).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.RIGHT));
         document.add(new Paragraph("\n"));
@@ -81,8 +89,8 @@ public class PdfServicio {
         // Rango de Fechas
         String rangoFechas = "";
         if (fechaInicio != null && fechaFin != null) {
-            rangoFechas = "Desde: " + fechaInicio.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) +
-                          " Hasta: " + fechaFin.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            rangoFechas = "Del " + fechaInicio.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) +
+                          " al " + fechaFin.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
         } else {
             rangoFechas = "Todos los movimientos";
         }
@@ -90,37 +98,85 @@ public class PdfServicio {
                 .setFont(font).setFontSize(10));
         document.add(new Paragraph("\n"));
 
-        // Tabla de Movimientos
-        float[] columnWidths = {1, 2, 2, 1, 1, 1, 1, 1, 2}; // Ajustar anchos de columna
+        // Tabla de Movimientos - anchos optimizados para mejor alineación
+        float[] columnWidths = {1.2f, 1.0f, 1.8f, 0.9f, 1.0f, 1.1f, 0.9f, 0.9f, 1.2f};
         Table table = new Table(columnWidths);
         table.setWidth(com.itextpdf.layout.properties.UnitValue.createPercentValue(100));
         table.setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.CENTER);
 
-        // Encabezados de la tabla
-        table.addHeaderCell(new Cell().add(new Paragraph("Fecha").setFont(boldFont).setFontSize(8)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
-        table.addHeaderCell(new Cell().add(new Paragraph("Tipo").setFont(boldFont).setFontSize(8)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
-        table.addHeaderCell(new Cell().add(new Paragraph("Referencia").setFont(boldFont).setFontSize(8)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
-        table.addHeaderCell(new Cell().add(new Paragraph("Cantidad").setFont(boldFont).setFontSize(8)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
-        table.addHeaderCell(new Cell().add(new Paragraph("P. Unit.").setFont(boldFont).setFontSize(8)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
-        table.addHeaderCell(new Cell().add(new Paragraph("V. Total").setFont(boldFont).setFontSize(8)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
-        table.addHeaderCell(new Cell().add(new Paragraph("Stock Actual").setFont(boldFont).setFontSize(8)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
-        table.addHeaderCell(new Cell().add(new Paragraph("Costo Prom.").setFont(boldFont).setFontSize(8)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
+        // Encabezados de la tabla - nombres completos y descriptivos
+        table.addHeaderCell(new Cell().add(new Paragraph("Fecha y Hora").setFont(boldFont).setFontSize(8)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
+        table.addHeaderCell(new Cell().add(new Paragraph("Tipo de Movimiento").setFont(boldFont).setFontSize(8)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
+        table.addHeaderCell(new Cell().add(new Paragraph("Referencia del Documento").setFont(boldFont).setFontSize(8)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
+        table.addHeaderCell(new Cell().add(new Paragraph("Cantidad").setFont(boldFont).setFontSize(8)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.RIGHT));
+        table.addHeaderCell(new Cell().add(new Paragraph("Precio Unitario").setFont(boldFont).setFontSize(8)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.RIGHT));
+        table.addHeaderCell(new Cell().add(new Paragraph("Valor Total").setFont(boldFont).setFontSize(8)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.RIGHT));
+        table.addHeaderCell(new Cell().add(new Paragraph("Stock Anterior").setFont(boldFont).setFontSize(8)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.RIGHT));
+        table.addHeaderCell(new Cell().add(new Paragraph("Stock Actual").setFont(boldFont).setFontSize(8)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.RIGHT));
         table.addHeaderCell(new Cell().add(new Paragraph("Observaciones").setFont(boldFont).setFontSize(8)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
 
         // Filas de datos
         for (KardexResponseDTO mov : movimientos) {
             table.addCell(new Cell().add(new Paragraph(mov.getFechaMovimiento().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))).setFont(font).setFontSize(7)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
             table.addCell(new Cell().add(new Paragraph(mov.getTipoMovimiento()).setFont(font).setFontSize(7)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER));
-            table.addCell(new Cell().add(new Paragraph(mov.getReferenciaDocumento()).setFont(font).setFontSize(7)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.LEFT));
+            table.addCell(new Cell().add(new Paragraph(mov.getReferenciaDocumento() != null ? mov.getReferenciaDocumento() : "").setFont(font).setFontSize(7)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.LEFT));
             table.addCell(new Cell().add(new Paragraph(String.valueOf(mov.getCantidad())).setFont(font).setFontSize(7)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.RIGHT));
-            table.addCell(new Cell().add(new Paragraph(mov.getPrecioUnitario().setScale(2, java.math.RoundingMode.HALF_UP).toString()).setFont(font).setFontSize(7)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.RIGHT));
-            table.addCell(new Cell().add(new Paragraph(mov.getValorTotal().setScale(2, java.math.RoundingMode.HALF_UP).toString()).setFont(font).setFontSize(7)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.RIGHT));
-            table.addCell(new Cell().add(new Paragraph(String.valueOf(mov.getStockActual())).setFont(font).setFontSize(7)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.RIGHT));
-            table.addCell(new Cell().add(new Paragraph(mov.getCostoPromedioActual().setScale(2, java.math.RoundingMode.HALF_UP).toString()).setFont(font).setFontSize(7)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.RIGHT));
+            table.addCell(new Cell().add(new Paragraph(mov.getPrecioUnitario() != null ? mov.getPrecioUnitario().setScale(2, java.math.RoundingMode.HALF_UP).toString() : "0.00").setFont(font).setFontSize(7)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.RIGHT));
+            table.addCell(new Cell().add(new Paragraph(mov.getValorTotal() != null ? mov.getValorTotal().setScale(2, java.math.RoundingMode.HALF_UP).toString() : "0.00").setFont(font).setFontSize(7)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.RIGHT));
+            table.addCell(new Cell().add(new Paragraph(String.valueOf(mov.getStockAnterior() != null ? mov.getStockAnterior() : 0)).setFont(font).setFontSize(7)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.RIGHT));
+            table.addCell(new Cell().add(new Paragraph(String.valueOf(mov.getStockActual() != null ? mov.getStockActual() : 0)).setFont(font).setFontSize(7)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.RIGHT));
             table.addCell(new Cell().add(new Paragraph(mov.getObservaciones() != null ? mov.getObservaciones() : "").setFont(font).setFontSize(7)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.LEFT));
         }
 
         document.add(table);
+
+        // Totales/resumen al pie cuando hay un producto filtrado
+        if (idProducto != null) {
+            int totalEntradas = 0;
+            int totalSalidas = 0;
+            java.math.BigDecimal totalEntradasVal = java.math.BigDecimal.ZERO;
+            java.math.BigDecimal totalSalidasVal = java.math.BigDecimal.ZERO;
+            Integer saldoInicial = null;
+            Integer stockFinal = null;
+            java.math.BigDecimal costoPromFinal = java.math.BigDecimal.ZERO;
+
+            if (!movimientos.isEmpty()) {
+                // Tomar el stockAnterior del primer movimiento listado como aproximación de saldo inicial del periodo
+                saldoInicial = movimientos.get(movimientos.size() - 1).getStockAnterior();
+            }
+
+            for (KardexResponseDTO m : movimientos) {
+                if ("SALIDA".equalsIgnoreCase(m.getTipoMovimiento())) {
+                    totalSalidas += m.getCantidad();
+                    if (m.getValorTotal() != null) totalSalidasVal = totalSalidasVal.add(m.getValorTotal());
+                } else {
+                    totalEntradas += m.getCantidad();
+                    if (m.getValorTotal() != null) totalEntradasVal = totalEntradasVal.add(m.getValorTotal());
+                }
+                if (m.getCostoPromedioActual() != null) costoPromFinal = m.getCostoPromedioActual();
+                stockFinal = m.getStockActual();
+            }
+
+            document.add(new Paragraph("\n"));
+            Table resumen = new Table(new float[]{2f, 1.2f, 1.6f, 1.6f, 1.8f}).useAllAvailableWidth();
+            resumen.addHeaderCell(new Cell().add(new Paragraph("Concepto").setFont(boldFont)));
+            resumen.addHeaderCell(new Cell().add(new Paragraph("Saldo Inicial").setFont(boldFont)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.RIGHT));
+            resumen.addHeaderCell(new Cell().add(new Paragraph("Entradas (Cant/Valor)").setFont(boldFont)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.RIGHT));
+            resumen.addHeaderCell(new Cell().add(new Paragraph("Salidas (Cant/Valor)").setFont(boldFont)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.RIGHT));
+            resumen.addHeaderCell(new Cell().add(new Paragraph("Stock Final / Costo Final").setFont(boldFont)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.RIGHT));
+
+            resumen.addCell(new Cell().add(new Paragraph(idProducto != null ? ("Producto #" + idProducto) : "Todos")));
+            resumen.addCell(new Cell().add(new Paragraph(String.valueOf(saldoInicial != null ? saldoInicial : 0))).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.RIGHT));
+            resumen.addCell(new Cell().add(new Paragraph(totalEntradas + " / " + totalEntradasVal.setScale(2, java.math.RoundingMode.HALF_UP))).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.RIGHT));
+            resumen.addCell(new Cell().add(new Paragraph(totalSalidas + " / " + totalSalidasVal.setScale(2, java.math.RoundingMode.HALF_UP))).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.RIGHT));
+            java.math.BigDecimal costoTotalFinal = (stockFinal != null ? new java.math.BigDecimal(stockFinal) : java.math.BigDecimal.ZERO)
+                    .multiply(costoPromFinal != null ? costoPromFinal : java.math.BigDecimal.ZERO)
+                    .setScale(2, java.math.RoundingMode.HALF_UP);
+            resumen.addCell(new Cell().add(new Paragraph((stockFinal != null ? stockFinal : 0) + " / " + costoTotalFinal)).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.RIGHT));
+
+            document.add(resumen);
+        }
+
         document.close();
         return baos.toByteArray();
     }
