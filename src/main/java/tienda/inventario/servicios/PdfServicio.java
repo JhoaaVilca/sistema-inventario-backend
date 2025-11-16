@@ -360,7 +360,12 @@ public class PdfServicio {
                 "body { font-family: monospace; color: #000; }" +
                 ".center{text-align:center;} .right{text-align:right;} .row{display:flex;justify-content:space-between;}" +
                 ".muted{color:#333;font-size:11px;} .bold{font-weight:700;} .hr{border-top:1px dashed #000;margin:6px 0;}" +
-                "table{width:100%;font-size:11px;border-collapse:collapse; page-break-inside: avoid;} thead, tr, td{ page-break-inside: avoid; } th,td{padding:2px 0;}" +
+                "table{width:100%;font-size:11px;border-collapse:collapse;table-layout:fixed; page-break-inside: avoid;} thead, tr, td{ page-break-inside: avoid; } th,td{padding:2px 0;vertical-align:top;}" +
+                "th:first-child,td:first-child{text-align:left;width:42%;padding-right:2px;} " +
+                "th:nth-child(2),td:nth-child(2){text-align:right;width:12%;padding-right:3px;} " +
+                "th:nth-child(3),td:nth-child(3){text-align:right;width:23%;padding-right:3px;} " +
+                "th:nth-child(4),td:nth-child(4){text-align:right;width:23%;} " +
+                "td{white-space:nowrap;font-variant-numeric:tabular-nums;}" +
                 "</style></head><body>" +
                 "<div style='width:100%;padding:3mm;box-sizing:border-box'>" +
                 "<div class='center' style='margin-bottom:4px'>" +
@@ -381,11 +386,11 @@ public class PdfServicio {
                 "</div>" +
                 "<div class='hr'></div>" +
                 "<table>" +
-                "<thead><tr><th style='text-align:left'>Producto</th><th class='right' style='width:20px'>Cant</th><th class='right' style='width:32px'>P.U.</th><th class='right' style='width:40px'>Subt</th></tr></thead>" +
+                "<thead><tr><th>Producto</th><th>Cant</th><th>P.U.</th><th>Subt</th></tr></thead>" +
                 "<tbody>" + items + "</tbody>" +
                 "</table>" +
                 "<div class='hr'></div>" +
-                "<div class='row' style='font-size:12px'><span class='bold'>TOTAL</span><span class='bold'>" + formatMoney(salida.getTotalSalida()) + "</span></div>" +
+                "<div class='row' style='font-size:12px'><span class='bold'>TOTAL:</span><span class='bold' style='font-variant-numeric:tabular-nums;text-align:right;'>" + formatMoney(salida.getTotalSalida()) + "</span></div>" +
                 ("CREDITO".equalsIgnoreCase(tipoVenta) ? "<div class='center muted' style='margin-top:8px'>Venta a crédito. Sujeto a pago en la fecha indicada.</div>" : "<div class='center muted' style='margin-top:8px'>Venta al contado.</div>") +
                 "<div class='center' style='margin-top:8px;font-size:11px'>¡Gracias por su compra!</div>" +
                 "</div>" +
