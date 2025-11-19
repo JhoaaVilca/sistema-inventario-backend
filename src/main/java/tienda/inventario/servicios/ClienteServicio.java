@@ -94,6 +94,22 @@ public class ClienteServicio implements IClienteServicio {
     }
 
     @Override
+    public void activarCliente(Long id) {
+        Cliente cliente = repositorio.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Cliente no encontrado con ID: " + id));
+        cliente.setActivo(true);
+        repositorio.save(cliente);
+    }
+
+    @Override
+    public void inactivarCliente(Long id) {
+        Cliente cliente = repositorio.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Cliente no encontrado con ID: " + id));
+        cliente.setActivo(false);
+        repositorio.save(cliente);
+    }
+
+    @Override
     public List<Cliente> buscarClientes(String termino) {
         return repositorio.buscarClientes(termino);
     }

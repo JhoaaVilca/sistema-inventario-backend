@@ -15,5 +15,7 @@ public interface IClienteServicio {
     Cliente guardarCliente(Cliente cliente);
     Cliente actualizarCliente(Long id, Cliente cliente);
     void eliminarCliente(Long id);
+    void activarCliente(Long id);
+    void inactivarCliente(Long id);
     List<Cliente> buscarClientes(String termino);
 }

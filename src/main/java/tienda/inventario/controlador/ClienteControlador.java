@@ -192,6 +192,34 @@ public class ClienteControlador {
         }
     }
 
+    // PUT: Activar cliente
+    @PutMapping("/{id}/activar")
+    public ResponseEntity<?> activarCliente(@PathVariable Long id) {
+        try {
+            servicio.activarCliente(id);
+            return ResponseEntity.ok(Map.of("mensaje", "Cliente activado correctamente"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error al activar cliente", e);
+            return ResponseEntity.internalServerError().body(Map.of("error", "Error interno del servidor"));
+        }
+    }
+
+    // PUT: Inactivar cliente
+    @PutMapping("/{id}/inactivar")
+    public ResponseEntity<?> inactivarCliente(@PathVariable Long id) {
+        try {
+            servicio.inactivarCliente(id);
+            return ResponseEntity.ok(Map.of("mensaje", "Cliente inactivado correctamente"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error al inactivar cliente", e);
+            return ResponseEntity.internalServerError().body(Map.of("error", "Error interno del servidor"));
+        }
+    }
+
     // Métodos auxiliares para conversión
     private ClienteResponseDTO toResponseDTO(Cliente cliente) {
         return new ClienteResponseDTO(
