@@ -87,7 +87,7 @@ public class EntradaServicio implements IEntradaServicio {
                         BigDecimal precioUnitario = BigDecimal.valueOf(detalle.getPrecioUnitario() == null ? 0.0 : detalle.getPrecioUnitario());
                         String referencia = nuevaEntrada.getNumeroFactura() != null 
                             ? ("Compra #" + nuevaEntrada.getIdEntrada() + " - Factura " + nuevaEntrada.getNumeroFactura()) 
-                            : ("Compra #" + nuevaEntrada.getIdEntrada());
+                            : ("Compra #" + nuevaEntrada.getIdEntrada() + " - Sin factura");
                         kardexServicio.registrarEntrada(productoBD, detalle.getCantidad(), precioUnitario, referencia, username, nuevaEntrada.getObservaciones());
                     } catch (Exception ignored) { }
                 }
