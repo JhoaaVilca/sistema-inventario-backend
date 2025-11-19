@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 @Service
 public class ClienteServicio implements IClienteServicio {
@@ -45,6 +46,10 @@ public class ClienteServicio implements IClienteServicio {
 
     @Override
     public Cliente guardarCliente(Cliente cliente) {
+        // Validación de formato de DNI: exactamente 8 dígitos
+        if (cliente.getDni() == null || !Pattern.matches("\\d{8}", cliente.getDni())) {
+            throw new IllegalArgumentException("El DNI debe tener exactamente 8 dígitos numéricos");
+        }
         // Validar que el DNI no exista
         if (repositorio.existsByDni(cliente.getDni())) {
             throw new IllegalArgumentException("Ya existe un cliente con el DNI: " + cliente.getDni());
@@ -61,6 +66,10 @@ public class ClienteServicio implements IClienteServicio {
         if (!clienteExistente.getDni().equals(cliente.getDni()) && 
             repositorio.existsByDni(cliente.getDni())) {
             throw new IllegalArgumentException("Ya existe otro cliente con el DNI: " + cliente.getDni());
+        }
+        // Validar formato del DNI
+        if (cliente.getDni() == null || !Pattern.matches("\\d{8}", cliente.getDni())) {
+            throw new IllegalArgumentException("El DNI debe tener exactamente 8 dígitos numéricos");
         }
         
         clienteExistente.setDni(cliente.getDni());

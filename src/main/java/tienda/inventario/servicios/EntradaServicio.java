@@ -62,6 +62,12 @@ public class EntradaServicio implements IEntradaServicio {
                         }
                     }
                 }
+
+                // Validación: no permitir fecha de vencimiento anterior a hoy
+                if (detalle.getFechaVencimiento() != null && detalle.getFechaVencimiento().isBefore(LocalDate.now())) {
+                    throw new IllegalArgumentException("La fecha de vencimiento no puede ser anterior a hoy para el producto ID "
+                            + (detalle.getProducto() != null ? detalle.getProducto().getIdProducto() : "desconocido"));
+                }
             }
         }
         Entrada nuevaEntrada = entradaRepositorio.save(entrada);
@@ -135,6 +141,12 @@ public class EntradaServicio implements IEntradaServicio {
             if (entrada.getDetalles() != null) {
                 for (DetalleEntrada detalle : entrada.getDetalles()) {
                     detalle.setEntrada(entradaExistente);
+
+                    // Validar fecha de vencimiento no pasada
+                    if (detalle.getFechaVencimiento() != null && detalle.getFechaVencimiento().isBefore(LocalDate.now())) {
+                        throw new IllegalArgumentException("La fecha de vencimiento no puede ser anterior a hoy para el producto ID "
+                                + (detalle.getProducto() != null ? detalle.getProducto().getIdProducto() : "desconocido"));
+                    }
                 }
             }
             entradaExistente.setDetalles(entrada.getDetalles());

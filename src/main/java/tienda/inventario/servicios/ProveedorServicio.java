@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 @Service
 public class ProveedorServicio implements IProveedorServicio {
@@ -35,6 +36,7 @@ public class ProveedorServicio implements IProveedorServicio {
 
     @Override
     public Proveedor guardarProveedor(Proveedor proveedor) {
+        validarDocumento(proveedor);
         proveedor.setActivo(true);
         return proveedorRepositorio.save(proveedor);
     }
@@ -57,6 +59,7 @@ public class ProveedorServicio implements IProveedorServicio {
 
     @Override
     public Proveedor actualizarProveedor(Long id, Proveedor proveedor) {
+        validarDocumento(proveedor);
         proveedor.setIdProveedor(id);
         return proveedorRepositorio.save(proveedor);
     }
@@ -64,5 +67,34 @@ public class ProveedorServicio implements IProveedorServicio {
     @Override
     public Optional<Proveedor> buscarPorDocumento(String numeroDocumento) {
         return proveedorRepositorio.findByNumeroDocumento(numeroDocumento);
+    }
+
+    private void validarDocumento(Proveedor proveedor) {
+        if (proveedor == null) {
+            throw new IllegalArgumentException("Datos de proveedor inválidos");
+        }
+        String tipo = proveedor.getTipoDocumento() != null ? proveedor.getTipoDocumento().trim().toUpperCase() : "";
+        String numero = proveedor.getNumeroDocumento() != null ? proveedor.getNumeroDocumento().trim() : "";
+        if (tipo.isEmpty()) {
+            throw new IllegalArgumentException("El tipo de documento es obligatorio");
+        }
+        if (numero.isEmpty()) {
+            throw new IllegalArgumentException("El número de documento es obligatorio");
+        }
+        if ("RUC".equals(tipo)) {
+            if (!Pattern.matches("\\d{11}", numero)) {
+                throw new IllegalArgumentException("El RUC debe tener exactamente 11 dígitos numéricos");
+            }
+        } else if ("DNI".equals(tipo)) {
+            if (!Pattern.matches("\\d{8}", numero)) {
+                throw new IllegalArgumentException("El DNI debe tener exactamente 8 dígitos numéricos");
+            }
+        } else {
+            // Si manejas más tipos, agrega aquí. Por ahora, solo RUC o DNI.
+            throw new IllegalArgumentException("Tipo de documento inválido: " + tipo);
+        }
+        // Normalizar el número al valor sanitizado
+        proveedor.setNumeroDocumento(numero);
+        proveedor.setTipoDocumento(tipo);
     }
 }

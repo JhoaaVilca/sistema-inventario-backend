@@ -19,7 +19,7 @@ public class Cliente {
 
     @Column(name = "dni", unique = true, nullable = false)
     @NotBlank(message = "El DNI es obligatorio")
-    @Size(min = 8, max = 12, message = "El documento debe tener entre 8 y 12 caracteres")
+    @Pattern(regexp = "\\d{8}", message = "El DNI debe tener exactamente 8 dígitos")
     private String dni;
 
     @Column(name = "nombres", nullable = false)
