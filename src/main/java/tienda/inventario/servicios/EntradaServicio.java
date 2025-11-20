@@ -14,6 +14,7 @@ import tienda.inventario.repositorio.EntradaRepositorio;
 import tienda.inventario.repositorio.ProductoRepositorio;
 import tienda.inventario.repositorio.LoteRepositorio;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
 import java.nio.file.Files;
@@ -21,6 +22,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
@@ -216,62 +218,40 @@ public class EntradaServicio implements IEntradaServicio {
     @Override
     public String subirFactura(Long idEntrada, MultipartFile file) {
         try {
-            // Verificar que la entrada existe
-            Entrada entrada = entradaRepositorio.findById(idEntrada)
-                .orElseThrow(() -> new RuntimeException("Entrada no encontrada con ID: " + idEntrada));
-
-            // Crear directorio de uploads si no existe
-            Path uploadDir = Paths.get("uploads/facturas");
-            if (!Files.exists(uploadDir)) {
-                Files.createDirectories(uploadDir);
-            }
-
-            // Generar nombre único para el archivo
-            String originalFilename = file.getOriginalFilename();
-            if (originalFilename == null || originalFilename.isEmpty()) {
-                throw new RuntimeException("El nombre del archivo no puede ser nulo o vacío");
-            }
-            
-            String extension = "";
-            int lastDotIndex = originalFilename.lastIndexOf(".");
-            if (lastDotIndex > 0) {
-                extension = originalFilename.substring(lastDotIndex);
-            }
-            
-            String filename = "factura_" + idEntrada + "_" + UUID.randomUUID().toString() + extension;
-            
-            // Guardar archivo
-            Path filePath = uploadDir.resolve(filename);
-            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-
-            // Actualizar entrada con la URL de la factura
-            String facturaUrl = "/api/entradas/" + idEntrada + "/factura";
-            entrada.setFacturaUrl(facturaUrl);
-            entradaRepositorio.save(entrada);
-
-            return facturaUrl;
-
+            Entrada entrada = obtenerEntrada(idEntrada);
+            return guardarFacturaArchivo(idEntrada, file, entrada);
         } catch (Exception e) {
             throw new RuntimeException("Error al subir la factura: " + e.getMessage(), e);
         }
     }
 
     @Override
+    public String reemplazarFactura(Long idEntrada, MultipartFile file) {
+        try {
+            Entrada entrada = obtenerEntrada(idEntrada);
+            eliminarFacturasFisicas(idEntrada);
+            return guardarFacturaArchivo(idEntrada, file, entrada);
+        } catch (Exception e) {
+            throw new RuntimeException("Error al reemplazar la factura: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
     public Resource descargarFactura(Long idEntrada) {
         try {
-            Entrada entrada = entradaRepositorio.findById(idEntrada)
-                .orElseThrow(() -> new RuntimeException("Entrada no encontrada con ID: " + idEntrada));
+            Entrada entrada = obtenerEntrada(idEntrada);
 
             if (entrada.getFacturaUrl() == null) {
                 return null;
             }
 
-            // Buscar archivo en el directorio de uploads
             Path uploadDir = Paths.get("uploads/facturas");
-            
-            // Buscar archivo que coincida con el patrón
-            try {
-                return Files.list(uploadDir)
+            if (!Files.exists(uploadDir)) {
+                return null;
+            }
+
+            try (Stream<Path> paths = Files.list(uploadDir)) {
+                return paths
                     .filter(path -> path.getFileName().toString().startsWith("factura_" + idEntrada + "_"))
                     .findFirst()
                     .map(path -> {
@@ -289,5 +269,55 @@ public class EntradaServicio implements IEntradaServicio {
         } catch (Exception e) {
             throw new RuntimeException("Error al descargar la factura: " + e.getMessage(), e);
         }
+    }
+
+    private Entrada obtenerEntrada(Long idEntrada) {
+        return entradaRepositorio.findById(idEntrada)
+            .orElseThrow(() -> new RuntimeException("Entrada no encontrada con ID: " + idEntrada));
+    }
+
+    private void eliminarFacturasFisicas(Long idEntrada) throws IOException {
+        Path uploadDir = Paths.get("uploads/facturas");
+        if (!Files.exists(uploadDir)) {
+            return;
+        }
+        try (Stream<Path> paths = Files.list(uploadDir)) {
+            paths
+                .filter(path -> path.getFileName().toString().startsWith("factura_" + idEntrada + "_"))
+                .forEach(path -> {
+                    try {
+                        Files.deleteIfExists(path);
+                    } catch (IOException ex) {
+                        throw new RuntimeException("Error al eliminar archivo de factura", ex);
+                    }
+                });
+        }
+    }
+
+    private String guardarFacturaArchivo(Long idEntrada, MultipartFile file, Entrada entrada) throws IOException {
+        Path uploadDir = Paths.get("uploads/facturas");
+        if (!Files.exists(uploadDir)) {
+            Files.createDirectories(uploadDir);
+        }
+
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || originalFilename.isEmpty()) {
+            throw new RuntimeException("El nombre del archivo no puede ser nulo o vacío");
+        }
+
+        String extension = "";
+        int lastDotIndex = originalFilename.lastIndexOf(".");
+        if (lastDotIndex > 0) {
+            extension = originalFilename.substring(lastDotIndex);
+        }
+
+        String filename = "factura_" + idEntrada + "_" + UUID.randomUUID() + extension;
+        Path filePath = uploadDir.resolve(filename);
+        Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+        String facturaUrl = "/api/entradas/" + idEntrada + "/factura";
+        entrada.setFacturaUrl(facturaUrl);
+        entradaRepositorio.save(entrada);
+        return facturaUrl;
     }
 }

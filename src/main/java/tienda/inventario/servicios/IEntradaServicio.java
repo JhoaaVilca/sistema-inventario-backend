@@ -29,5 +29,6 @@ public interface IEntradaServicio {
 
     // Métodos para facturas
     String subirFactura(Long idEntrada, MultipartFile file);
+    String reemplazarFactura(Long idEntrada, MultipartFile file);
     Resource descargarFactura(Long idEntrada);
 }

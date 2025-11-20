@@ -9,6 +9,7 @@ import tienda.inventario.servicios.IEntradaServicio;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -155,12 +156,35 @@ public class EntradaControlador {
             }
 
             String facturaUrl = entradaServicio.subirFactura(id, file);
-            return ResponseEntity.ok().body("{\"facturaUrl\": \"" + facturaUrl + "\"}");
+            return ResponseEntity.ok(Map.of("facturaUrl", facturaUrl));
 
         } catch (Exception e) {
             logger.error("Error al subir factura: ", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body("Error al subir la factura: " + e.getMessage());
+        }
+    }
+
+    // ✅ PUT: Reemplazar factura existente
+    @PutMapping("/{id}/factura")
+    public ResponseEntity<?> reemplazarFactura(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
+        try {
+            if (file.isEmpty()) {
+                return ResponseEntity.badRequest().body("No se ha seleccionado ningún archivo");
+            }
+
+            String contentType = file.getContentType();
+            if (contentType == null || (!contentType.equals("application/pdf") &&
+                !contentType.startsWith("image/"))) {
+                return ResponseEntity.badRequest().body("Solo se permiten archivos PDF o imágenes");
+            }
+
+            String facturaUrl = entradaServicio.reemplazarFactura(id, file);
+            return ResponseEntity.ok(Map.of("facturaUrl", facturaUrl));
+        } catch (Exception e) {
+            logger.error("Error al reemplazar factura: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error al reemplazar la factura: " + e.getMessage());
         }
     }
 
